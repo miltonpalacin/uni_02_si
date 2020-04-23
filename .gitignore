@@ -127,3 +127,7 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+homework/test.py
+homework/prueba_01.py
+.vscode/
+libsys/
