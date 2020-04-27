@@ -4,7 +4,7 @@ import random
 import collections
 import itertools as it
 import numpy as np
-from ..help import combination
+from ..help import combination, tool
 
 
 class AcoTWay:
@@ -48,7 +48,7 @@ class AcoTWay:
             candidates_path = []
 
             # 5. Iniciar matriz de feromonas con la constante ingresada _tau
-            pheronome = AcoTWay.start_matrix_values(self.__parameters, self.__tau)
+            pheromone = AcoTWay.start_matrix_values(self.__parameters, self.__tau)
 
             # 6. Cálculo inicial de la heuristica para cada recorrido de la hormiga
             heuristic = AcoTWay.compute_heuristic_values(self.__parameters, covering_list)
@@ -72,23 +72,38 @@ class AcoTWay:
                         quu = random.uniform(0, 1)
                         if quu > self.__quu:
                             # exploramos un nuevo ruta
-                            var_proba[pos_param] = AcoTWay.explore_probability(pheronome[pos_param], heuristic[pos_param], self.__alfa, self.__beta)
+                            var_proba[pos_param] = AcoTWay.explore_probability(pheromone[pos_param], heuristic[pos_param], self.__alfa, self.__beta)
 
                         elif quu <= self.__quu:
                             # explotamos un nuevo ruta
-                            var_proba[pos_param] = AcoTWay.exploit_probability(pheronome[pos_param], heuristic[pos_param], self.__alfa, self.__beta)
+                            var_proba[pos_param] = AcoTWay.exploit_probability(pheromone[pos_param], heuristic[pos_param], self.__alfa, self.__beta)
 
-                        # 11 Actualizando la feromona local
-                        pheronome = self.__rho*pheronome
+                    # 11. Guardar la mejor de las rutas las rutas realizada por cada hormiga
+                    path = [np.argmax(v) for v in var_proba]
+                    ants_path.append(path)
 
-                    # 12. Guardar las rutas realizada por cada hormida
-                    ants_path.append([np.argmax(v) for v in var_proba])
+                    # 12. Evaporación de feromona: reducir su presencia por un factor 0<rho<=1. Actualización Local.
+                    #     y  iberación de feromonas: las hormigas liberan hormigas en las ruta que ha recorrido (los resumimos)
+                    pheromone = AcoTWay.local_pheromones_update(path, pheromone, self.__tau, self.__rho)
 
-                # 13. Seleccionar la mejor ruta (por número de caso de prueba que puede cubrir) realizada por cada hormiga
+                # 13. Seleccionar la mejor ruta (por el número de casos que cubre en las combinaciones tway) realizada por cada hormiga
                 candidates_path.append(AcoTWay.fitness_function(uncovering_list, covering_list, ants_path, self.__parameters))
 
+                # 14. Actualización global de feromonas
+
             # 16. Elegir el mejor de todos los candidatos
-            # best = candidates_path[np.argmax(candidates_path[:,0]
+            best_candidate = AcoTWay.max_candidate(candidates_path)
+
+            # 17. Agregar el mejor candidato a la lista de cobertura total.
+            if best_candidate[0] != 0:
+                covering_list.append(best_candidate[1])
+
+                # 18. Actualizar la lista de combinaciones no cubiertas.
+                for uncov in best_candidate[2]:
+                    uncovering_list = tool.remove_array_array(uncovering_list, uncov)
+
+            # 19. Retornar la lista de covertura de los caso de prueba.
+            return covering_list
 
     # FUNCIONES DE APOYO
 
@@ -213,5 +228,15 @@ class AcoTWay:
             best_cand = [0, [], []]
 
         return best_cand
+
+    @staticmethod
+    def local_pheromones_update(path, pheromone, tau, rho):
+        for idx, edge in enumerate(path):
+            for var in range(len(pheromone[idx])):
+                if var != edge:
+                    pheromone[idx][var] = rho * pheromone[idx][var]
+                else:
+                    pheromone[idx][var] = (1 - rho) * pheromone[idx][var] + rho*tau
+        return pheromone
 
     # FIN:FUNCIONES DE APOYO
