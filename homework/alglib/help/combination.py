@@ -49,7 +49,7 @@ print(np.asarray(list(it.combinations(np.arange(v.shape[1]),2)))**2)
 """
 #print(create_full_array(bivector_to_vector([[2, 2], [2, 3], [3, 8]])))
 #cc = collections.Counter(create_full_array(bivector_to_vector([[2, 2], [2, 3], [3, 8]]))[:,0])
-#print(cc,cc[0], cc[1], cc[2], cc[3])
+#print(min(cc.values()),cc[0], cc[1], cc[2], cc[3])
 # print(create_full_array([2,2,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1]).shape)
 # print(create_full_array([[2, 2], [1, 1], [2, 8], [2, 3], [2, 1], [2, 6], [2, 1], [1, 1]]).shape)
 # print(list(np.arange(2)))

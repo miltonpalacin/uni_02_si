@@ -43,7 +43,9 @@ class AcoTWay:
         #    el número de iteración y el número de hormigas se han asignado en el constructor
 
         # 4. Recorrer todos los casos de prueba generados  posibles
-        while uncovering_list.size > 0:
+        print(uncovering_list)
+        while len(uncovering_list) > 0:
+            print(len(uncovering_list))
             # rutas candidatas
             candidates_path = []
 
@@ -61,10 +63,10 @@ class AcoTWay:
                 # 8. Realizar el recorrido para cada hormiga hormigas
                 for _ in range(self.__ants):
                     # crear la matriz de probabilidades para generar los edges (rutas hacia nodos/parámetro)
-                    var_proba = AcoTWay.start_matrix_values(self.__parameters, 0)
+                    var_proba = AcoTWay.start_matrix_values(self.__parameters, 0.0)
 
                     # 9. Cada hormiga recorre los parámetros pasando por un ruta (selección de variable) para construir un caso de prueba
-                    for pos_param in range(self.__parameters.size):
+                    for pos_param in range(len(self.__parameters)):
 
                         # 10. Recorre cada nodo(parámetro), asigna probabilidad a los rutas (variable) por parámetro.
                         #     utiliza el valor de qo para explotar un ruta existente o explorar un nuevo ruta (edge)
@@ -87,47 +89,53 @@ class AcoTWay:
                     pheromone = AcoTWay.local_pheromones_update(path, pheromone, self.__tau, self.__rho)
 
                 # 13. Seleccionar la mejor ruta (por el número de casos que cubre en las combinaciones tway) realizada por cada hormiga
-                candidates_path.append(AcoTWay.fitness_function(uncovering_list, covering_list, ants_path, self.__parameters))
+                best_ant_path = AcoTWay.fitness_function(uncovering_list, covering_list, ants_path, self.__parameters)
+                candidates_path.append(best_ant_path)  # puede ser vacío, cauando el camino esta cubierto
 
-                # 14. Actualización global de feromonas
+                # 14. Actualización global de feromonas. Solo se actualiza el mejor
+                if best_ant_path[0] != 0:
+                    pheromone = AcoTWay.global_pheromones_update(best_ant_path[1], pheromone, self.__rho, best_ant_path[0], len(uncovering_list))
 
-            # 16. Elegir el mejor de todos los candidatos
+            # 15. Elegir el mejor de todos los candidatos
             best_candidate = AcoTWay.max_candidate(candidates_path)
 
-            # 17. Agregar el mejor candidato a la lista de cobertura total.
+            # 16. Agregar el mejor candidato a la lista de cobertura total.
             if best_candidate[0] != 0:
                 covering_list.append(best_candidate[1])
 
-                # 18. Actualizar la lista de combinaciones no cubiertas.
+                # 17. Actualizar la lista de combinaciones no cubiertas.
                 for uncov in best_candidate[2]:
                     uncovering_list = tool.remove_array_array(uncovering_list, uncov)
 
-            # 19. Retornar la lista de covertura de los caso de prueba.
-            return covering_list
+        # 18. Retornar la lista de covertura de los caso de prueba.
+        return covering_list
 
     # FUNCIONES DE APOYO
 
     @staticmethod
     def compute_heuristic_values(parameters, covering_list):
         give = []
+
         if covering_list:
-            parameter = 0
-            for i in parameters:
-                values = range(i)
-                give.append(np.asarray([0 for _ in values]))
+            covering = np.asarray(covering_list)
+            for idx, val in enumerate(parameters):
+                values = range(val)
+                # genera entrada para los valores de las variables
+                give.append(np.asarray([0.0 for _ in values]))
 
                 # contar numero de veces en CA_set optimo
-                val_count = collections.Counter(covering_list[:, parameter])
+                val_count = collections.Counter(covering[:, idx])
                 val_max = max(val_count.values())
-                val_min = min(val_count.values())
+                val_min = 0
+                # Si no se cuenta algúna varaible el menor valor es 0
+                if len(val_count) == val:
+                    val_min = min(val_count.values())
                 # calculando el valor heurístico nij (inverse de la distancia)
                 for k in values:
-                    give[parameter][k] = (val_max - val_count[k] - 1)/(val_max - val_min - 1)
-                parameter += 1
+                    give[idx][k] = (val_max - val_count[k] + 1)/(val_max - val_min + 1)
         else:
             for i in parameters:
-                values = range(i)
-                give.append(np.asarray([1 for _ in values]))
+                give.append(np.asarray([1.0 for _ in  range(i)]))
 
         return np.asarray(give)
 
@@ -141,19 +149,21 @@ class AcoTWay:
     @staticmethod
     def explore_probability(pheromone_values, heuristic_values, alpha, beta):
         top = (pheromone_values**alpha) * (heuristic_values ** beta)
-        bottom = np.asarray([np.sum(v) for v in top])
-        return top/bottom
+        #bottom = np.asarray([np.sum(v) for v in top])
+        print(top)
+        #print(bottom)
+        return top#/bottom
 
     @staticmethod
     def exploit_probability(pheromone_values, heuristic_values, alpha, beta):
         # diminuir la influencia de la heuristica
-        top = (pheromone_values**alpha) / (heuristic_values ** beta)
-        bottom = np.asarray([np.sum(v) for v in top])
-        return top/bottom
+        top = (pheromone_values**alpha) * (heuristic_values ** beta)
+        #bottom = np.asarray([np.sum(v) for v in top])
+        return top#/bottom
 
     @staticmethod
     def initial_unconvering_list(parameters, t_way):
-        return np.asarray(list(it.combinations(np.arange(parameters.size), t_way)))
+        return np.asarray(list(it.combinations(np.arange(len(parameters)), t_way)))
 
     @staticmethod
     def fitness_function(unconvering_list, covering_list, cases_test, parameters):
@@ -237,6 +247,14 @@ class AcoTWay:
                     pheromone[idx][var] = rho * pheromone[idx][var]
                 else:
                     pheromone[idx][var] = (1 - rho) * pheromone[idx][var] + rho*tau
+        return pheromone
+
+    @staticmethod
+    def global_pheromones_update(path, pheromone, rho, fi_best, tot_uncover):
+        for idx, edge in enumerate(path):
+            for var in range(len(pheromone[idx])):
+                if var == edge:
+                    pheromone[idx][var] = (1 - rho) * pheromone[idx][var] + rho*(fi_best/tot_uncover)
         return pheromone
 
     # FIN:FUNCIONES DE APOYO
