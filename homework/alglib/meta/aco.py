@@ -41,7 +41,6 @@ class AcoTWay:
         #    el número de iteración y el número de hormigas se han asignado en el constructor
 
         # 4. Recorrer todos los casos de prueba generados  posibles
-        print(uncovering_list)
         while len(uncovering_list) > 0:
             # rutas candidatas
             candidates_path = []
@@ -65,9 +64,7 @@ class AcoTWay:
                     # 9. Cada hormiga recorre los parámetros pasando por un ruta (selección de variable) para construir un caso de prueba
                     for pos_param in range(len(self.__parameters)):
 
-                        # 10. Recorre cada nodo(parámetro), asigna probabilidad a los rutas (variable) por parámetro.
-                        #     esta sección servirá para eligir el ruta (variable) de mayor probabilidad
-                        var_proba[pos_param] = AcoTWay.exploit_probability(pheromone[pos_param], heuristic[pos_param], self.__alfa, self.__beta)
+                        var_proba[pos_param] = AcoTWay.explore_probability(pheromone[pos_param], heuristic[pos_param], self.__alfa, self.__beta)
 
                     # 11. Guardar la mejor de las rutas las rutas realizada por cada hormiga
                     path = [np.argmax(v) for v in var_proba]
@@ -92,9 +89,9 @@ class AcoTWay:
             if best_candidate[0] != 0:
                 covering_list.append(best_candidate[1])
 
-            # 17. Actualizar la lista de combinaciones no cubiertas.
-            for uncov in AcoTWay.cover_uncovering_list(uncovering_list, covering_list, self.__parameters):
-                uncovering_list = tool.remove_array_array(uncovering_list, uncov)
+                # 17. Actualizar la lista de combinaciones no cubiertas.
+                for uncov in AcoTWay.cover_uncovering_list(uncovering_list, covering_list, self.__parameters):
+                    uncovering_list = tool.remove_array_array(uncovering_list, uncov)
 
         # 18. Retornar la lista de covertura de los caso de prueba.
         return np.asarray(covering_list)
@@ -138,17 +135,15 @@ class AcoTWay:
     @staticmethod
     def explore_probability(pheromone_values, heuristic_values, alpha, beta):
         top = (pheromone_values**alpha) * (heuristic_values ** beta)
-        # bottom = np.asarray([np.sum(v) for v in top])
-        # print(top)
-        # print(bottom)
-        return top  # /bottom
+        bottom = np.sum(top)
+        quu = np.random.uniform(0, 1, len(pheromone_values))  # random.uniform(0, 1)
+        return quu * (top/bottom)
 
     @staticmethod
     def exploit_probability(pheromone_values, heuristic_values, alpha, beta):
         top = (pheromone_values**alpha) * (heuristic_values ** beta)
         bottom = np.sum(top)
-        quu = np.random.uniform(0, 1, len(pheromone_values))  # random.uniform(0, 1)
-        return quu * (top/bottom)
+        return top / bottom
 
     @staticmethod
     def initial_uncovering_list(parameters, t_way):
