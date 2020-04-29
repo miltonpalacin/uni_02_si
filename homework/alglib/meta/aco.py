@@ -12,7 +12,7 @@ class AcoTWay:
         """
         Implementación de Ant Colony Optimization para generación de casos de prueba T-Way (de t formas):
         Se considera un generación de casos de prueba con todas la interacciones posibles.
-        Se considera como un ruta para que las hormigas se muevan, el moviemnto que realiza de F1 hasta Fn+1 
+        Se considera como un ruta para que las hormigas se muevan, el moviemnto que realiza de F1 hasta Fn+1
         El  algoritmo ACO es la generación ACO prueba uno a la vez.
         El recorrido de una hormiga debe ser tal que cada caso de prueba no cubierto deberá ser explorado
         """
@@ -75,7 +75,7 @@ class AcoTWay:
                     pheromone = AcoTWay.local_pheromones_update(path, pheromone, self.__tau, self.__rho)
 
                 # 13. Seleccionar la mejor ruta (por el número de casos que cubre en las combinaciones tway) realizada por cada hormiga
-                best_ant_path = AcoTWay.fitness_function(uncovering_list, covering_list, ants_path, self.__parameters)
+                best_ant_path = AcoTWay.fitness_function(uncovering_list, covering_list, ants_path)
                 candidates_path.append(best_ant_path)  # puede ser vacío, cauando el camino esta cubierto
 
                 # 14. Actualización global de feromonas. Solo se actualiza el mejor
@@ -90,7 +90,7 @@ class AcoTWay:
                 covering_list.append(best_candidate[1])
 
                 # 17. Actualizar la lista de combinaciones no cubiertas.
-                for uncov in best_candidate[2]:
+                for uncov in AcoTWay.cover_uncovering_list(uncovering_list, covering_list, self.__parameters):
                     uncovering_list = tool.remove_array_array(uncovering_list, uncov)
 
         # 18. Retornar la lista de covertura de los caso de prueba.
@@ -150,16 +150,14 @@ class AcoTWay:
         return np.asarray(list(it.combinations(np.arange(len(parameters)), t_way)))
 
     @staticmethod
-    def fitness_function(uncovering_list, covering_list, cases_test, parameters):
+    def fitness_function(uncovering_list, covering_list, cases_test):
         give = []
         max_case = 0
-        max_rem = 0
         if covering_list:
             cover = np.asarray(covering_list)
             for test in cases_test:
 
                 if not (cover == test).all(1).any():
-                    rem = []  # para remover los casos que se lograron cubrir
                     count = 0
                     for uncov in uncovering_list:
                         # extraer todas la combinaciónes ya realizadas en la matriz de cobertura
@@ -168,33 +166,18 @@ class AcoTWay:
                         case = np.asarray(test)[uncov]
                         if(check == case).all(1).any():
                             continue
-
-                        # total de casos de prueba que deben existir con esta combinación t-way
-                        tot = 1
-                        for i in uncov:
-                            tot = tot * parameters[i]
-
-                        # verificar si con el caso adicional se cubre el la combinación t-way puntual
-                        if tot == (len(check)+1):
-                            rem.append(uncov)
-
                         count += 1
 
                     # validar también que el mejor caso sea el que pueda elimnar más combinaciones en caso complete varias
-                    if max_case <= count and count != 0:
-                        if max_case == count:
-                            if max_rem <= len(rem):
-                                max_rem = len(rem)
-                                give = [count, test, rem]
-                        else:
-                            max_case = count
-                            give = [count, test, rem]
+                    if max_case <= count:
+                        max_case = count
+                        give = [count, test]
 
             if max_case == 0:
-                give = [0, [], []]
+                give = [0, []]
         else:
             count = len(uncovering_list)
-            give = [count, cases_test[0], []]
+            give = [count, cases_test[0]]
 
         return np.asarray(give)
 
@@ -225,23 +208,14 @@ class AcoTWay:
     def max_candidate(candidates_path):
         max_cand = 0
         best_cand = []
-        max_rem = 0
 
         for candidate in candidates_path:
-            val = candidate[0]
-
-            # validar también que el mejor caso sea el que pueda elimnar más combinaciones
-            if max_cand <= val and val != 0:
-                if max_cand == val:
-                    if max_rem <= len(candidate[2]):
-                        max_rem = len(candidate[2])
-                        best_cand = candidate
-                else:
-                    max_cand = val
-                    best_cand = candidate
+            if max_cand <= candidate[0]:
+                max_cand = candidate[0]
+                best_cand = candidate
 
         if max_cand == 0:
-            best_cand = [0, [], []]
+            best_cand = [0, []]
 
         return best_cand
 

@@ -26,7 +26,7 @@ START_TIME = time.process_time()
 VP = [[5, 1], [2, 10], [8, 1], [5, 1]]
 
 # T-Way
-T = 2
+T = 3
 
 # Instancia de metaheuristica Ant Colony Optimization (ACO)
 META_ACO = aco.AcoTWay(VP, T)
