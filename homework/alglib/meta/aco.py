@@ -12,8 +12,8 @@ class AcoTWay:
         """
         Implementación de Ant Colony Optimization para generación de casos de prueba T-Way (de t formas):
         Se considera un generación de casos de prueba con todas la interacciones posibles.
-        Se puede considerar como un ruta para que las hormigas se muevan, como se muestra en la Figura 1.
-        La Figura 1 muestra el espacio de búsqueda de un algoritmo de generación de prueba, uno a la vez.
+        Se considera como un ruta para que las hormigas se muevan, el moviemnto que realiza de F1 hasta Fn+1 
+        El  algoritmo ACO es la generación ACO prueba uno a la vez.
         El recorrido de una hormiga debe ser tal que cada caso de prueba no cubierto deberá ser explorado
         """
         # cada valor del parámetro representa la cantidad de variables que puede aceptar o cambiar.
