@@ -6,19 +6,11 @@ from alglib.help import log
 # Iniciar el control del tiempo
 START_TIME = time.process_time()
 
-# Vector de parámetros con la cantidad de variables(valores posibles) por cada parámetros
-#VP = [[10, 10]]
-#VP = [[2, 4]]
-#VP = [[2, 10]]
-#VP = [[5, 1],[3,8],[2, 2]]
-#VP = [[2, 85], [1, 1], [2, 8], [2, 3], [2, 1], [2, 6], [2, 1], [1, 1]]
-#VP = [[5, 2],[4,2],[3, 2]]
-#VP = [[12, 1], [5, 3],[2,1], [1,1]]
-#VP = [[5, 1], [3, 8],[2,2]]
-#VP = [[5, 2], [4, 2],[3,2]]
-#VP = [[3, 13]]
-
 # Caso de Eduardo Yauri
+
+#/***** PARA INFORME****/
+#VP = [[3, 4]]
+#VP = [[2, 3],[3, 2]]
 VP = [[5, 1], [2, 10], [8, 1], [5, 1]]
 
 # T-Way
@@ -51,3 +43,28 @@ print("Porcentaje optimizado a ", T, "- way:", 4*"\t", (1 - len(TEST)/np.prod([p
 # Finalizar el control del tiempo
 END_TIME = time.process_time()
 print("Tiempo utilizado: ", 7*"\t", str(END_TIME - START_TIME))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Vector de parámetros con la cantidad de variables(valores posibles) por cada parámetros
+#VP = [[10, 10]]
+#VP = [[2, 4]]
+#VP = [[2, 10]]
+#VP = [[5, 1],[3,8],[2, 2]]
+#VP = [[2, 85], [1, 1], [2, 8], [2, 3], [2, 1], [2, 6], [2, 1], [1, 1]]
+#VP = [[5, 2],[4,2],[3, 2]]
+#VP = [[12, 1], [5, 3],[2,1], [1,1]]
+#VP = [[5, 1], [3, 8],[2,2]]
+#VP = [[5, 2], [4, 2],[3,2]]
+#VP = [[3, 13]]

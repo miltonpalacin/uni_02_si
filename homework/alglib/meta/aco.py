@@ -30,7 +30,7 @@ class AcoTWay:
         self.__beta = beta              # coeficiente para el control de la influencia/peso de la inversa (una ruta/distancia) de la distancia
         self.__rho = rho                # tasa de volatilidad de las feromonas
         self.__tau = tau                # valor inicial de la feromona
-        self.__quu = quu                # Valor que permite la explotación o exploración de nuevas rutas (regla de proporcionalidad aleatoria) para
+        self.__quu = quu                # Valor que permite la explotación o exploración de nuevas rutas (regla de proporcionalidad aleatoria)
         self.__iteration = iteration    # máximo de iteraciones (númoer de veces) que hará el recorrido de todas hormiga
 
     def run(self):
