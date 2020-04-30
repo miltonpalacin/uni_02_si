@@ -1,5 +1,6 @@
 # coding: UTF-8
 
+import time
 from datetime import datetime
 import logging
 import logging.handlers
@@ -158,3 +159,18 @@ def log_base(val, typ, *msg):
         LOG.logger_trace.info(msg_string)
     else:
         LOG.logger_log.info(msg_string)
+
+
+START_TIME = time.process_time()
+COUNTER_TIME = 0
+END_TIME = START_TIME
+
+
+def debug_timer(*message):
+    global END_TIME, START_TIME
+    END_TIME = time.process_time()
+    diff = END_TIME - START_TIME
+    if diff >= COUNTER_TIME:
+        START_TIME = time.process_time()
+        date = datetime.now().strftime('%d/%m/%Y %H:%M:%S.%f')[:-3]
+        print(date, "INFO:", message)

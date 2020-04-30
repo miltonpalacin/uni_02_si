@@ -1,9 +1,12 @@
 # coding: UTF-8
 
+import random
+import time
 import collections
 import itertools as it
 import numpy as np
 from ..help import combination, tool
+from ..help import log
 
 
 class AcoTWay:
@@ -19,14 +22,15 @@ class AcoTWay:
         # cada valor del parámetro representa la cantidad de variables que puede aceptar o cambiar.
         self.__parameters = combination.bivector_to_vector(parameters_variables)
         self.__t_way = t_way
-        self.config(ants=5, alfa=0.5, beta=3, rho=0.5, tau=0.4, iteration=2)
+        self.config(ants=20, alfa=0.5, beta=3, rho=0.5, tau=0.4, quu=0.5, iteration=5)
 
-    def config(self, ants=None, alfa=None, beta=None, rho=None, tau=None, iteration=None):
+    def config(self, ants=None, alfa=None, beta=None, rho=None, tau=None, quu=None, iteration=None):
         self.__ants = ants              # número de hormigas
         self.__alfa = alfa              # coeficiente para el control de la influencia/peso de la cantidad de feromonas
         self.__beta = beta              # coeficiente para el control de la influencia/peso de la inversa (una ruta/distancia) de la distancia
         self.__rho = rho                # tasa de volatilidad de las feromonas
         self.__tau = tau                # valor inicial de la feromona
+        self.__quu = quu                # Valor que permite la explotación o exploración de nuevas rutas (regla de proporcionalidad aleatoria) para
         self.__iteration = iteration    # máximo de iteraciones (númoer de veces) que hará el recorrido de todas hormiga
 
     def run(self):
@@ -40,6 +44,10 @@ class AcoTWay:
         # 3. Iniciar la principales variables
         #    el número de iteración y el número de hormigas se han asignado en el constructor
 
+        print("Total de combinaciones a cubrir:", len(uncovering_list))
+        last_ind = 0.0
+        last_ind_new = 0.0
+        ini_force_close_time = time.process_time()
         # 4. Recorrer todos los casos de prueba generados  posibles
         while len(uncovering_list) > 0:
             # rutas candidatas
@@ -50,6 +58,19 @@ class AcoTWay:
 
             # 6. Cálculo inicial de la heuristica para cada recorrido de la hormiga
             heuristic = AcoTWay.compute_heuristic_values(self.__parameters, covering_list)
+
+            # Para mostrar un log en el caso quede pegado en un optimo local
+            ########### INI LOG ##################
+            end_force_close_time = time.process_time()
+            if end_force_close_time - ini_force_close_time > 60:
+                print("Caso donde falto completar la combinacion de alguna de sus variables:",uncovering_list)
+                break
+            log.debug_timer("Se ha terminado una iteraciones mas y van:", len(uncovering_list), "sin cubrir. Cubiertas van:", len(covering_list), "indicador", last_ind)
+            last_ind_new = len(covering_list)/len(uncovering_list)
+            if(last_ind_new != last_ind):
+                ini_force_close_time = time.process_time()
+                last_ind = last_ind_new
+            ########### INI FIN ##################
 
             # 7. Repetir/iterar el el recorrido de todas las hormigas N (pasado en __iteration) veces
             for _ in range(self.__iteration):
@@ -64,7 +85,18 @@ class AcoTWay:
                     # 9. Cada hormiga recorre los parámetros pasando por un ruta (selección de variable) para construir un caso de prueba
                     for pos_param in range(len(self.__parameters)):
 
-                        var_proba[pos_param] = AcoTWay.explore_probability(pheromone[pos_param], heuristic[pos_param], self.__alfa, self.__beta)
+                        # var_proba[pos_param] = AcoTWay.explore_probability(pheromone[pos_param], heuristic[pos_param], self.__alfa, self.__beta)
+                        # 10. Recorre cada nodo(parámetro), asigna probabilidad a los rutas (variable) por parámetro.
+                        #     utiliza el valor de qo para explotar un ruta existente o explorar un nuevo ruta (edge)
+                        #     esta sección servirá para eligir el ruta (variable) de mayor probabilidad
+                        quu = random.uniform(0, 1)
+                        if quu > self.__quu:
+                            # exploramos un nuevo ruta
+                            var_proba[pos_param] = AcoTWay.explore_probability(pheromone[pos_param], heuristic[pos_param], self.__beta)
+
+                        elif quu <= self.__quu:
+                            # explotamos un nuevo ruta
+                            var_proba[pos_param] = AcoTWay.exploit_probability(pheromone[pos_param], heuristic[pos_param], self.__alfa, self.__beta)
 
                     # 11. Guardar la mejor de las rutas las rutas realizada por cada hormiga
                     path = [np.argmax(v) for v in var_proba]
@@ -123,6 +155,7 @@ class AcoTWay:
             for i in parameters:
                 give.append(np.asarray([1.0 for _ in range(i)]))
 
+        #log.debug_timer("Heuristica:", give)
         return np.asarray(give)
 
     @staticmethod
@@ -133,8 +166,9 @@ class AcoTWay:
         return np.asarray(give)
 
     @staticmethod
-    def explore_probability(pheromone_values, heuristic_values, alpha, beta):
-        top = (pheromone_values**alpha) * (heuristic_values ** beta)
+    def explore_probability(pheromone_values, heuristic_values, beta):
+        #top = (pheromone_values**0.03) * (heuristic_values ** beta)
+        top = (heuristic_values ** beta)
         bottom = np.sum(top)
         quu = np.random.uniform(0, 1, len(pheromone_values))  # random.uniform(0, 1)
         return quu * (top/bottom)
@@ -143,7 +177,10 @@ class AcoTWay:
     def exploit_probability(pheromone_values, heuristic_values, alpha, beta):
         top = (pheromone_values**alpha) * (heuristic_values ** beta)
         bottom = np.sum(top)
-        return top / bottom
+        quu = np.random.uniform(0, 1, len(pheromone_values))  # random.uniform(0, 1)
+        if bottom == 0:
+            return quu * (top)
+        return quu * (top/bottom)
 
     @staticmethod
     def initial_uncovering_list(parameters, t_way):
@@ -164,6 +201,7 @@ class AcoTWay:
                         check = np.unique(cover[:, uncov], axis=0)
                         # extraer la combinación del caso de prueba y verificar si cubre una combinación adicional
                         case = np.asarray(test)[uncov]
+                        #log.debug_timer("No cubiertes", len(uncovering_list), "actual", uncov, "caseo", case, check)
                         if(check == case).all(1).any():
                             continue
                         count += 1
