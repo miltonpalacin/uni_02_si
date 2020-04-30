@@ -41,13 +41,14 @@ class AcoTWay:
         # 2. Iniciar la matriz de covertura
         covering_list = []
 
-        # 3. Iniciar la principales variables
+        # 3. Iniciar los principales argumentos del algoritmo
         #    el número de iteración y el número de hormigas se han asignado en el constructor
 
         print("Total de combinaciones a cubrir:", len(uncovering_list))
         last_ind = 0.0
         last_ind_new = 0.0
         ini_force_close_time = time.process_time()
+
         # 4. Recorrer todos los casos de prueba generados  posibles
         while len(uncovering_list) > 0:
             # rutas candidatas
@@ -65,7 +66,7 @@ class AcoTWay:
             if end_force_close_time - ini_force_close_time > 60:
                 print("Caso donde falto completar la combinacion de alguna de sus variables:",uncovering_list)
                 break
-            log.debug_timer("Se ha terminado una iteraciones mas y van:", len(uncovering_list), "sin cubrir. Cubiertas van:", len(covering_list), "indicador", last_ind)
+            log.debug_timer("Combinaciones NO cubiertas:", len(uncovering_list), ", Casos de prueba cubiertos:", len(covering_list), "indicador", last_ind)
             last_ind_new = len(covering_list)/len(uncovering_list)
             if(last_ind_new != last_ind):
                 ini_force_close_time = time.process_time()

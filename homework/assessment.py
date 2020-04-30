@@ -3,31 +3,21 @@ import numpy as np
 from alglib.meta import aco
 from alglib.help import log
 
-
-
-# Vector de parámetros con la cantidad de variables por cada parámetros
-
 # Iniciar el control del tiempo
 START_TIME = time.process_time()
 
+# Vector de parámetros con la cantidad de variables(valores posibles) por cada parámetros
 #VP = [[10, 10]]
 #VP = [[2, 4]]
 #VP = [[2, 10]]
 #VP = [[5, 1],[3,8],[2, 2]]
-#VP = [[2, 2], [1, 1], [2, 8], [2, 3], [2, 1], [2, 6], [2, 1], [1, 1]]
+#VP = [[2, 85], [1, 1], [2, 8], [2, 3], [2, 1], [2, 6], [2, 1], [1, 1]]
 #VP = [[5, 2],[4,2],[3, 2]]
 #VP = [[12, 1], [5, 3],[2,1], [1,1]]
 #VP = [[5, 1], [3, 8],[2,2]]
 #VP = [[5, 2], [4, 2],[3,2]]
 #VP = [[3, 13]]
-"""
--- Tipo contenido 12 
--- Discioplia 5
--- Subdisciplina 5
--- lenguanke 5
--- Manuevo mas viejo 2
--- Textot 1
-"""
+
 # Caso de Eduardo Yauri
 VP = [[5, 1], [2, 10], [8, 1], [5, 1]]
 
@@ -35,6 +25,7 @@ VP = [[5, 1], [2, 10], [8, 1], [5, 1]]
 T = 2
 
 # Instancia de metaheuristica Ant Colony Optimization (ACO)
+np.random.seed()
 META_ACO = aco.AcoTWay(VP, T)
 
 # Realizar una prueba ejecutando el método RUN
