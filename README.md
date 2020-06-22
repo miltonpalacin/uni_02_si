@@ -1,1 +1,1 @@
-# uni_02_si
+Código relacionado a los algoritmos de heurística y metaheurística
