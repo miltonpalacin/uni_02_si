@@ -32,11 +32,11 @@ class AcoStaffing:
         self.__task_skill = task_skill
         self.__task_precedent = task_precedent
         self.__mind_strategy = mind_strategy
-        self.config(ants=20, alfa=0.5, beta=3, rho=0.5, tau=0.4, quu=0.5, generation=1000)
+        self.config(ants=20, alpha=0.5, beta=3, rho=0.5, tau=0.4, quu=0.5, generation=1000)
 
-    def config(self, ants=None, alfa=None, beta=None, rho=None, tau=None, quu=None, generation=None):
+    def config(self, ants=None, alpha=None, beta=None, rho=None, tau=None, quu=None, generation=None):
         self.__ants = ants              # número de hormigas
-        self.__alfa = alfa              # coeficiente para el control de la influencia/peso de la cantidad de feromonas
+        self.__alpha = alpha              # coeficiente para el control de la influencia/peso de la cantidad de feromonas
         self.__beta = beta              # coeficiente para el control de la influencia/peso de la inversa (una ruta/distancia) de la distancia
         self.__rho = rho                # tasa de volatilidad de las feromonas
         self.__tau = tau                # valor inicial de la feromona
@@ -47,11 +47,11 @@ class AcoStaffing:
         # 00. Generación de la matriz con con el división de cada tareas, dada por la densidad de la dedicación
         #     den = 1 + 1/mind ó len(matrix_mind).numrow
         task_paths = self.generate_task_split()
-        print(task_paths)
+        # print(task_paths)
 
         # 02. Inicializar el valor feromonas
         pheromone_values = self.generate_pheromone_values()
-        print(pheromone_values)
+        # print(pheromone_values)
 
         # 03. Inicializar el valor feromonas
         heuristic_values = self.generate_heuristic_values()
@@ -71,15 +71,28 @@ class AcoStaffing:
         iteration = 0
         max_wait = 100
         count_wait = 0
-        return
-        while (count_wait <= max_wait) or (iteration <= self.__generation):
+        self.__generation = 1
+        self.__ants = 1
+
+        while (count_wait <= max_wait) and (iteration <= self.__generation):
             iteration += 1
             for _ in range(self.__ants):
-                path_proba = 1
-                for i in range (len(self.__task)):
-                    s = 1
-                    
+                ant_values = self.generate_ant_values()
+                for i in range(len(self.__task)):
+                    quu = random.uniform(0, 1)
 
+                    if quu > self.__quu:
+                        #v = self.explore_ant_path(heuristic_values[i])
+                        #print(i, v)
+                        # exploramos un nuevo ruta
+                        ant_values[i] = self.explore_ant_path(heuristic_values[i])
+                    elif quu <= self.__quu:
+                        #print(i, self.exploit_ant_path(pheromone_values[i], heuristic_values[i]))
+                        # explotamos un nuevo ruta
+                        ant_values[i] = self.exploit_ant_path(pheromone_values[i], heuristic_values[i])
+
+                print(5*"ant_values")
+                print(ant_values)
         """
         # 1. Generar todas las posibles interacciones basado en el total de valores que pueden tomar cada uno de los parámetros
         #    V1^P1, V2^P2, V3^P3,..., Vn^Pn
@@ -91,7 +104,7 @@ class AcoStaffing:
         # 3. Iniciar los principales argumentos del algoritmo
         #    el número de iteración y el número de hormigas se han asignado en el constructor
 
-        
+
 
         # 4. Recorrer todos los casos de prueba generados  posibles
         while len(uncovering_list) > 0:
@@ -130,7 +143,7 @@ class AcoStaffing:
                     # 9. Cada hormiga recorre los parámetros pasando por un ruta (selección de variable) para construir un caso de prueba
                     for pos_param in range(len(self.__parameters)):
 
-                        # var_proba[pos_param] = AcoTWay.explore_probability(pheromone[pos_param], heuristic[pos_param], self.__alfa, self.__beta)
+                        # var_proba[pos_param] = AcoTWay.explore_probability(pheromone[pos_param], heuristic[pos_param], self.__alpha, self.__beta)
                         # 10. Recorre cada nodo(parámetro), asigna probabilidad a los rutas (variable) por parámetro.
                         #     utiliza el valor de qo para explotar un ruta existente o explorar un nuevo ruta (edge)
                         #     esta sección servirá para eligir el ruta (variable) de mayor probabilidad
@@ -141,7 +154,7 @@ class AcoStaffing:
 
                         elif quu <= self.__quu:
                             # explotamos un nuevo ruta
-                            var_proba[pos_param] = AcoTWay.exploit_probability(pheromone[pos_param], heuristic[pos_param], self.__alfa, self.__beta)
+                            var_proba[pos_param] = AcoTWay.exploit_probability(pheromone[pos_param], heuristic[pos_param], self.__alpha, self.__beta)
 
                     # 11. Guardar la mejor de las rutas las rutas realizada por cada hormiga
                     path = [np.argmax(v) for v in var_proba]
@@ -175,52 +188,35 @@ class AcoStaffing:
         """
 
     # FUNCIONES DE APOYO
+    def exploit_ant_path(self, pheromone_values, heuristic_values):
+        up = (pheromone_values ** self.__alpha) * (heuristic_values ** self.__beta)
+        down = [[u if u > 0 else 1.0] for u in np.sum(up, axis=1)]
+
+        return up/down
+
+    def explore_ant_path(self, heuristic_values):
+        up = (heuristic_values ** self.__beta)
+        down = [[u if u > 0 else 1.0] for u in np.sum(up, axis=1)]
+        random_explore = np.asarray([np.asarray(np.random.uniform(0, 1, len(self.__mind_strategy))) for _ in range(len(self.__staff))])
+        return random_explore*(up/down)
 
     # Genera la división de la tarea en el número de las estrategías de división
+
     def generate_task_split(self):
-        strategy = []
-        for k, g in enumerate(self.__mind_strategy):
-            strategy.append(g[1])
-
-        staff_task_matrix = []
-        for i in range(len(self.__task)):
-            task_strategy = []
-            for j in range(len(self.__staff)):
-                task_strategy.append(strategy)
-            staff_task_matrix.append(np.asarray(task_strategy))
-
-        return np.asarray(staff_task_matrix)
+        return self.generate_staff_task_matrix(np.asarray([g[1] for _, g in enumerate(self.__mind_strategy)]))
 
     def generate_ant_values(self):
-        return self.generate_staff_task_matrix(np.asarray([0 for _ in range(len(self.__mind_strategy))]))
-
-    def generate_staff_task_matrix(self, strategy):
-        staff_task_matrix = []
-        for i in range(len(self.__task)):
-            task_strategy = []
-            for j in range(len(self.__staff)):
-                task_strategy.append(strategy)
-            staff_task_matrix.append(np.asarray(task_strategy))
-
-        return np.asarray(staff_task_matrix)
+        return self.generate_staff_task_matrix(np.asarray([0.0 for _ in range(len(self.__mind_strategy))]))
 
     def generate_pheromone_values(self):
         return self.generate_staff_task_matrix(np.asarray([self.__tau for _ in range(len(self.__mind_strategy))]))
-        # strategy = np.asarray([self.__tau for _ in range(len(self.__mind_strategy))])
-
-        # staff_task_matrix = []
-        # for i in range(len(self.__task)):
-        #     task_strategy = []
-        #     for j in range(len(self.__staff)):
-        #         task_strategy.append(strategy)
-        #     staff_task_matrix.append(np.asarray(task_strategy))
-
-        # return np.asarray(staff_task_matrix)
 
     def generate_heuristic_values(self):
         total = np.sum(self.__mind_strategy[:, 1])
+        return self.generate_staff_task_matrix(np.asarray([1/total for _ in range(len(self.__mind_strategy))]))
         strategy = np.asarray([1/total for _ in range(len(self.__mind_strategy))])
 
+    def generate_staff_task_matrix(self, strategy):
         staff_task_matrix = []
         for i in range(len(self.__task)):
             task_strategy = []
