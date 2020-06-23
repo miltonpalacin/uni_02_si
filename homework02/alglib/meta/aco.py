@@ -43,106 +43,6 @@ class AcoStaffing:
         self.__quu = quu                # Valor que permite la explotación o exploración de nuevas rutas (regla de proporcionalidad aleatoria)
         self.__iteration = iteration    # máximo de iteraciones (númoer de veces) que hará el recorrido de todas hormiga
 
-    def generate_task_split(self):
-        strategy = []
-        for k, g in enumerate(self.__mind_strategy):
-            strategy.append(g[1])
-
-        staff_task_matrix = []
-        for i in range(len(self.__task)):
-            task_strategy = []
-            for j in range(len(self.__staff)):
-                task_strategy.append(strategy)
-            staff_task_matrix.append(np.asarray(task_strategy))
-
-        return np.asarray(staff_task_matrix)
-
-    def generate_pheromone_values(self):
-        strategy = np.asarray([self.__tau for _ in range(len(self.__mind_strategy))])
-
-        staff_task_matrix = []
-        for i in range(len(self.__task)):
-            task_strategy = []
-            for j in range(len(self.__staff)):
-                task_strategy.append(strategy)
-            staff_task_matrix.append(np.asarray(task_strategy))
-
-        return np.asarray(staff_task_matrix)
-
-    def generate_heuristic_values(self):
-        total = np.sum(self.__mind_strategy[:, 1])
-        strategy = np.asarray([1/total for _ in range(len(self.__mind_strategy))])
-
-        staff_task_matrix = []
-        for i in range(len(self.__task)):
-            task_strategy = []
-            for j in range(len(self.__staff)):
-                task_strategy.append(strategy)
-            staff_task_matrix.append(np.asarray(task_strategy))
-
-        return np.asarray(staff_task_matrix)
-
-    def generate_initial_solution(self):
-
-        while True:
-            solution_matrix = []
-            for i in range(len(self.__task)):
-                ded = []
-                for j in range(len(self.__staff)):
-                    k = randint(0, len(self.__mind_strategy) - 1)
-                    ded.append(self.__mind_strategy[k][1])
-                solution_matrix.append(ded)
-
-            # Validando que cada tarea este a cargo de mínimo un empleado
-            if np.min([np.sum(v) for _, v in enumerate(solution_matrix)]) > 0:
-                # Validando que las personas asignadas a una tarea cubran las habilidades requeridad (skills)
-                for i in range(len(self.__task)):
-                    a = self.__task_skill[i, 1:]
-                    c = [0 for _ in range(len(a))]
-                    for j, val in enumerate(solution_matrix[i]):
-                        if val > 0:
-                            b = self.__staff_skill[j, 1:]
-                            c = [int(c[k] or b[k]) for k in range(len(b))]
-                    d = [int(c[k] and a[k]) for k in range(len(a))]
-                    #print(a, c, d)
-                    if np.sum(a) != np.sum(d):
-                        continue
-                break
-
-        # print(self.__task_skill,self.__task_skill[0,1:])
-
-        # Calculando duración del proyecto
-        cost_dur_total = 0
-        project_dur_total = 0
-        project_cost_total = 0
-        task_matrix_dur = []
-        for i in range(len(self.__task)):
-            #staff_dur = np.sum([e[2]*solution_matrix[i][j] for j, e in enumerate(self.__staff)])
-            staff_dur = np.sum([solution_matrix[i][j] for j in range(len(self.__staff))])
-            task_dur = (0 if staff_dur <= 0 else (self.__task[i][1] / staff_dur))
-            task_matrix_dur.append(task_dur)
-            cost_dur_total += task_dur
-            project_cost_total += np.sum([e[1]*solution_matrix[i][j]*task_dur for j, e in enumerate(self.__staff)])
-            #print(project_dur_total,project_cost_total, staff_dur,task_dur)
-
-        # Caculando el inicio y el final de las actividades
-        tpg_scheduler = []
-        for i in range(len(self.__task)):
-            precedents = self.__task_precedent[i, 1:]
-            start = 0
-            for j in range(len(self.__task)):
-                if precedents[j] == 1:
-                    start = max(start, tpg_scheduler[j][1])
-            end = start + task_matrix_dur[i]
-            tpg_scheduler.append([start, end])
-            project_dur_total = end
-
-        return np.asarray(solution_matrix), np.asarray([project_dur_total,
-                                                        project_cost_total,
-                                                        cost_dur_total,
-                                                        np.asarray(task_matrix_dur),
-                                                        np.asarray(tpg_scheduler)])
-
     def run(self):
         # 00. Generación de la matriz con con el división de cada tareas, dada por la densidad de la dedicación
         #     den = 1 + 1/mind ó len(matrix_mind).numrow
@@ -261,6 +161,152 @@ class AcoStaffing:
 
     # FUNCIONES DE APOYO
 
+    # Genera la división de la tarea en el número de las estrategías de
+    def generate_task_split(self):
+        strategy = []
+        for k, g in enumerate(self.__mind_strategy):
+            strategy.append(g[1])
+
+        staff_task_matrix = []
+        for i in range(len(self.__task)):
+            task_strategy = []
+            for j in range(len(self.__staff)):
+                task_strategy.append(strategy)
+            staff_task_matrix.append(np.asarray(task_strategy))
+
+        return np.asarray(staff_task_matrix)
+
+    def generate_pheromone_values(self):
+        strategy = np.asarray([self.__tau for _ in range(len(self.__mind_strategy))])
+
+        staff_task_matrix = []
+        for i in range(len(self.__task)):
+            task_strategy = []
+            for j in range(len(self.__staff)):
+                task_strategy.append(strategy)
+            staff_task_matrix.append(np.asarray(task_strategy))
+
+        return np.asarray(staff_task_matrix)
+
+    def generate_heuristic_values(self):
+        total = np.sum(self.__mind_strategy[:, 1])
+        strategy = np.asarray([1/total for _ in range(len(self.__mind_strategy))])
+
+        staff_task_matrix = []
+        for i in range(len(self.__task)):
+            task_strategy = []
+            for j in range(len(self.__staff)):
+                task_strategy.append(strategy)
+            staff_task_matrix.append(np.asarray(task_strategy))
+
+        return np.asarray(staff_task_matrix)
+
+    def generate_initial_solution(self):
+
+        while True:
+            solution_matrix = []
+            for i in range(len(self.__task)):
+                ded = []
+                for j in range(len(self.__staff)):
+                    k = randint(0, len(self.__mind_strategy) - 1)
+                    ded.append(self.__mind_strategy[k][1])
+                solution_matrix.append(ded)
+
+            # Validando que cada tarea este a cargo de mínimo un empleado
+            if np.min([np.sum(v) for _, v in enumerate(solution_matrix)]) > 0:
+                # Validando que las personas asignadas a una tarea cubran las habilidades requeridad (skills)
+                for i in range(len(self.__task)):
+                    a = self.__task_skill[i, 1:]
+                    c = [0 for _ in range(len(a))]
+                    for j, val in enumerate(solution_matrix[i]):
+                        if val > 0:
+                            b = self.__staff_skill[j, 1:]
+                            c = [int(c[k] or b[k]) for k in range(len(b))]
+                    d = [int(c[k] and a[k]) for k in range(len(a))]
+                    # print(a, c, d)
+                    if np.sum(a) != np.sum(d):
+                        continue
+                break
+
+        # print(self.__task_skill,self.__task_skill[0,1:])
+
+        # Calculando duración del proyecto
+        # cost_dur_total = 0
+        project_dur_total = 0
+        project_cost_total = 0
+        task_matrix_dur = []
+        for i in range(len(self.__task)):
+            # staff_dur = np.sum([e[2]*solution_matrix[i][j] for j, e in enumerate(self.__staff)])
+            staff_dur = np.sum([solution_matrix[i][j] for j in range(len(self.__staff))])
+            task_dur = (0 if staff_dur <= 0 else (self.__task[i][1] / staff_dur))
+            task_matrix_dur.append(task_dur)
+            # cost_dur_total += task_dur
+            project_cost_total += np.sum([e[1]*solution_matrix[i][j]*task_dur for j, e in enumerate(self.__staff)])
+            # print(project_dur_total,project_cost_total, staff_dur,task_dur)
+
+        # Caculando el inicio y el final de las actividades
+        tpg_scheduler = []
+        for i in range(len(self.__task)):
+            precedents = self.__task_precedent[i, 1:]
+            start = 0
+            for j in range(len(self.__task)):
+                if precedents[j] == 1:
+                    start = max(start, tpg_scheduler[j][1])
+            end = start + task_matrix_dur[i]
+            tpg_scheduler.append([start, end])
+            project_dur_total = end
+
+        # Caculando el inicio y el final maximo de las actividades
+        tpg_max_scheduler = []
+        project_max_dur_total = 0
+        for i in range(len(self.__task)):
+            precedents = self.__task_precedent[i, 1:]
+            start = 0
+            for j in range(len(self.__task)):
+                if precedents[j] == 1:
+                    start = max(start, tpg_max_scheduler[j][1])
+            end = start + self.__task[i][2]
+            tpg_max_scheduler.append([start, end])
+            project_max_dur_total = end
+
+        # Calculando trabajo de sobretiempo en el staff y tareas
+        # De tareas
+        project_overtime_task_total = 0
+        for i, v in enumerate(task_matrix_dur):
+            time_max = self.__task[i][2]
+            # print(v-time_max)
+            if v > time_max:
+                project_overtime_task_total += (v-time_max)
+
+        # De personas
+        # Mejorar el cálculo para actividade que se sobrepones, usando una unidad de tiempo (por ejemplo días)
+        project_overeffort_staff_total = 0
+        for i, e in enumerate(self.__staff):
+            tpg_scheduler_tmp = tpg_scheduler[:]
+            over_effort = 0
+            for j in range(len(self.__task)):
+                end = tpg_scheduler_tmp[j][1]
+                if end - tpg_scheduler_tmp[j][0] > 0:
+                    over_effort += solution_matrix[j][i]
+                    for k in range(j+1, len(self.__task)):
+                        if end - tpg_scheduler_tmp[k][0] > 0:
+                            dif = min(end - tpg_scheduler_tmp[k][0], task_matrix_dur[k])
+                            tpg_scheduler_tmp[k][0] = tpg_scheduler_tmp[k][0] + dif
+                            over_effort += solution_matrix[k][i]
+            over_effort =  over_effort - self.__task[i][2]
+            print(i, over_effort)
+            project_overeffort_staff_total += 0 if over_effort <= 0 else over_effort
+
+        return np.asarray(solution_matrix), np.asarray([project_dur_total,
+                                                        project_max_dur_total,
+                                                        project_cost_total,
+                                                        project_overtime_task_total,
+                                                        project_overeffort_staff_total,
+                                                        np.asarray(task_matrix_dur),
+                                                        np.asarray(tpg_scheduler)])
+
+
+"""
     @staticmethod
     def compute_heuristic_values(parameters, covering_list):
         give = []
@@ -406,4 +452,5 @@ class AcoStaffing:
                     pheromone[idx][var] = (1 - rho) * pheromone[idx][var] + rho*(fi_best/tot_uncover)
         return pheromone
 
-    # FIN:FUNCIONES DE APOYO
+"""
+# FIN:FUNCIONES DE APOYO
