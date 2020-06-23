@@ -1,6 +1,7 @@
 # coding: UTF-8
 
 import random
+from random import randint
 import time
 import collections
 import itertools as it
@@ -15,7 +16,7 @@ class AcoStaffing:
         """
         Implementación de Ant Colony Optimization para asignación de personal a las actividades
         de un proyecto, sujeto:
-          * Ningun trabajador debe estar sobrecargado al mismo tiempo, es decir, 
+          * Ningun trabajador debe estar sobrecargado al mismo tiempo, es decir,
             la suma de toda dedicación a sus tareas asignadas debe ser máximo el 100% de su dedicaión.
           * Todas los skill de las tareas debe ser cubiertos:
           * Seleccionar aquellas soluciones (asignaciones de personal) de mínimo costo (salario) y duración.
@@ -69,8 +70,8 @@ class AcoStaffing:
         return np.asarray(staff_task_matrix)
 
     def generate_heuristic_values(self):
-        total = np.sum
-        strategy = np.asarray([self.__tau for _ in range(len(self.__mind_strategy))])
+        total = np.sum(self.__mind_strategy[:, 1])
+        strategy = np.asarray([1/total for _ in range(len(self.__mind_strategy))])
 
         staff_task_matrix = []
         for i in range(len(self.__task)):
@@ -81,19 +82,85 @@ class AcoStaffing:
 
         return np.asarray(staff_task_matrix)
 
+    def generate_initial_solution(self):
+
+        while True:
+            solution_matrix = []
+            for i in range(len(self.__task)):
+                ded = []
+                for j in range(len(self.__staff)):
+                    k = randint(0, len(self.__mind_strategy) - 1)
+                    ded.append(self.__mind_strategy[k][1])
+                solution_matrix.append(ded)
+
+            # Validando que cada tarea este a cargo de mínimo un empleado
+            if np.min([np.sum(v) for _, v in enumerate(solution_matrix)]) > 0:
+                # Validando que las personas asignadas a una tarea cubran las habilidades requeridad (skills)
+                for i in range(len(self.__task)):
+                    a = self.__task_skill[i, 1:]
+                    c = [0 for _ in range(len(a))]
+                    for j, val in enumerate(solution_matrix[i]):
+                        if val > 0:
+                            b = self.__staff_skill[j, 1:]
+                            c = [int(c[k] or b[k]) for k in range(len(b))]
+                    d = [int(c[k] and a[k]) for k in range(len(a))]
+                    #print(a, c, d)
+                    if np.sum(a) != np.sum(d):
+                        continue
+                break
+
+        # print(self.__task_skill,self.__task_skill[0,1:])
+
+        # Calculando duración del proyecto
+        cost_dur_total = 0
+        project_dur_total = 0
+        project_cost_total = 0
+        task_matrix_dur = []
+        for i in range(len(self.__task)):
+            #staff_dur = np.sum([e[2]*solution_matrix[i][j] for j, e in enumerate(self.__staff)])
+            staff_dur = np.sum([solution_matrix[i][j] for j in range(len(self.__staff))])
+            task_dur = (0 if staff_dur <= 0 else (self.__task[i][1] / staff_dur))
+            task_matrix_dur.append(task_dur)
+            cost_dur_total += task_dur
+            project_cost_total += np.sum([e[1]*solution_matrix[i][j]*task_dur for j, e in enumerate(self.__staff)])
+            #print(project_dur_total,project_cost_total, staff_dur,task_dur)
+
+        # Caculando el inicio y el final de las actividades
+        tpg_scheduler = []
+        for i in range(len(self.__task)):
+            precedents = self.__task_precedent[i, 1:]
+            start = 0
+            for j in range(len(self.__task)):
+                if precedents[j] == 1:
+                    start = max(start, tpg_scheduler[j][1])
+            end = start + task_matrix_dur[i]
+            tpg_scheduler.append([start, end])
+            project_dur_total = end
+
+        return np.asarray(solution_matrix), np.asarray([project_dur_total,
+                                                        project_cost_total,
+                                                        cost_dur_total,
+                                                        np.asarray(task_matrix_dur),
+                                                        np.asarray(tpg_scheduler)])
+
     def run(self):
         # 00. Generación de la matriz con con el división de cada tareas, dada por la densidad de la dedicación
         #     den = 1 + 1/mind ó len(matrix_mind).numrow
         task_paths = self.generate_task_split()
-        print(task_paths)
+        # print(task_paths)
 
-        # 01. Inicializar el valor feromonas
+        # 02. Inicializar el valor feromonas
         pheromone_values = self.generate_pheromone_values()
-        print(pheromone_values)
+        # print(pheromone_values)
 
-        # 01. Inicializar el valor feromonas
+        # 03. Inicializar el valor feromonas
         heuristic_values = self.generate_heuristic_values()
-        print(heuristic_values)
+        # print("---", heuristic_values)
+
+        # 04. Generar solución aleatoria
+        current_solution, goals = self.generate_initial_solution()
+        print(current_solution)
+        print(goals)
 
         """
         # 1. Generar todas las posibles interacciones basado en el total de valores que pueden tomar cada uno de los parámetros
@@ -219,7 +286,7 @@ class AcoStaffing:
             for i in parameters:
                 give.append(np.asarray([1.0 for _ in range(i)]))
 
-        #log.debug_timer("Heuristica:", give)
+        # log.debug_timer("Heuristica:", give)
         return np.asarray(give)
 
     @staticmethod
@@ -231,7 +298,7 @@ class AcoStaffing:
 
     @staticmethod
     def explore_probability(pheromone_values, heuristic_values, beta):
-        #top = (pheromone_values**0.03) * (heuristic_values ** beta)
+        # top = (pheromone_values**0.03) * (heuristic_values ** beta)
         top = (heuristic_values ** beta)
         bottom = np.sum(top)
         quu = np.random.uniform(0, 1, len(pheromone_values))  # random.uniform(0, 1)
@@ -265,7 +332,7 @@ class AcoStaffing:
                         check = np.unique(cover[:, uncov], axis=0)
                         # extraer la combinación del caso de prueba y verificar si cubre una combinación adicional
                         case = np.asarray(test)[uncov]
-                        #log.debug_timer("No cubiertes", len(uncovering_list), "actual", uncov, "caseo", case, check)
+                        # log.debug_timer("No cubiertes", len(uncovering_list), "actual", uncov, "caseo", case, check)
                         if(check == case).all(1).any():
                             continue
                         count += 1
