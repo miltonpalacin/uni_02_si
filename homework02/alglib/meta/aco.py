@@ -109,7 +109,8 @@ class AcoStaffing:
                     candidate_solution, candidate_goals = self.compute_candidate_solution(candidate_solution)
                     if candidate_goals[0] > current_goals[0]:
                         max_wait = 0
-                        print("Mejor candiddato:", "Fitness:", candidate_goals[0], "Costot:", candidate_goals[1], "Duracion:", candidate_goals[2])
+                        #log.debug_timer("Mejor candidato:", "Fitness:", candidate_goals[0], "Cost:", candidate_goals[1], "Duration:", candidate_goals[2])
+                        # print("Mejor candiddato:", "Fitness:", candidate_goals[0], "Costot:", candidate_goals[1], "Duracion:", candidate_goals[2])
                         current_solution = candidate_solution
                         current_goals = candidate_goals
                         # Update feromona de forma global
@@ -392,7 +393,7 @@ class AcoStaffing:
         print(20*"*", 60*"*", 20*"*")
         print(20*"*", "MATRIZ DE ASIGNACION", 20*"*")
         sol = [list(map(str, x)) for x in np.array(solution.transpose())]
-        sol = [[15*" "+i for i in e] for e in sol]
+        sol = [[10*" "+i for i in e] for e in sol]
         sol = np.insert(sol, 0,  task_desc[:, 1:].transpose()[0], axis=0)
         #data = {"Personal": np.insert(staff_desc[:, 1:], 0, " ", axis=0).tolist(), "data": sol}
         sol = np.insert(sol, 0,  np.insert(staff_desc[:, 1:], 0, " ", axis=0).transpose()[0], axis=1)
