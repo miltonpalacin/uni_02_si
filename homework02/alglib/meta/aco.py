@@ -33,15 +33,21 @@ class AcoStaffing:
         self.__task_precedent = task_precedent
         self.__mind_strategy = mind_strategy
         self.config(ants=20, alpha=0.5, beta=3, rho=0.5, tau=0.4, quu=0.5, generation=1000)
+        self.weight_config(wcost=10**(-6), wdur=10**(-1), wover=10**(-1))
 
     def config(self, ants=None, alpha=None, beta=None, rho=None, tau=None, quu=None, generation=None):
         self.__ants = ants              # número de hormigas
-        self.__alpha = alpha              # coeficiente para el control de la influencia/peso de la cantidad de feromonas
+        self.__alpha = alpha            # coeficiente para el control de la influencia/peso de la cantidad de feromonas
         self.__beta = beta              # coeficiente para el control de la influencia/peso de la inversa (una ruta/distancia) de la distancia
         self.__rho = rho                # tasa de volatilidad de las feromonas
         self.__tau = tau                # valor inicial de la feromona
         self.__quu = quu                # Valor que permite la explotación o exploración de nuevas rutas (regla de proporcionalidad aleatoria)
         self.__generation = generation  # máximo de generaciones (número de veces) que hará el recorrido de todas hormiga
+
+    def weight_config(self, wcost=None, wdur=None, wover=None):
+        self.__wcost = wcost            # Peso de importancia del costo
+        self.__wdur = wdur              # Peso de importancia de la duración
+        self.__wover = wover            # Peso de importancia del sobretiempo
 
     def run(self):
         # 00. Generación de la matriz con con el división de cada tareas, dada por la densidad de la dedicación
@@ -78,21 +84,23 @@ class AcoStaffing:
             iteration += 1
             for _ in range(self.__ants):
                 ant_values = self.generate_ant_values()
+                # candidate_solution = np.asarray([[0.0 for _ in range(len(self.__staff))] for _ in range(len(self.__task))])
                 for i in range(len(self.__task)):
                     quu = random.uniform(0, 1)
-
                     if quu > self.__quu:
-                        #v = self.explore_ant_path(heuristic_values[i])
-                        #print(i, v)
                         # exploramos un nuevo ruta
                         ant_values[i] = self.explore_ant_path(heuristic_values[i])
                     elif quu <= self.__quu:
-                        #print(i, self.exploit_ant_path(pheromone_values[i], heuristic_values[i]))
                         # explotamos un nuevo ruta
                         ant_values[i] = self.exploit_ant_path(pheromone_values[i], heuristic_values[i])
 
-                print(5*"ant_values")
-                print(ant_values)
+                candidate_solution = np.asarray([[self.__mind_strategy[np.argmax(node)][1] for node in staff] for staff in ant_values])
+                if self.assess_feasibility(candidate_solution):
+                    continue
+                print(30*"*", "candidate_solution")
+                print(candidate_solution)
+                print(30*"*", "compute_candidate_solution")
+                print(self.compute_candidate_solution(candidate_solution))
         """
         # 1. Generar todas las posibles interacciones basado en el total de valores que pueden tomar cada uno de los parámetros
         #    V1^P1, V2^P2, V3^P3,..., Vn^Pn
@@ -191,7 +199,8 @@ class AcoStaffing:
     def exploit_ant_path(self, pheromone_values, heuristic_values):
         up = (pheromone_values ** self.__alpha) * (heuristic_values ** self.__beta)
         down = [[u if u > 0 else 1.0] for u in np.sum(up, axis=1)]
-
+        random_exploit = np.asarray([np.asarray(np.random.uniform(0, 1, len(self.__mind_strategy))) for _ in range(len(self.__staff))])
+        return random_exploit*(up/down)
         return up/down
 
     def explore_ant_path(self, heuristic_values):
@@ -201,7 +210,6 @@ class AcoStaffing:
         return random_explore*(up/down)
 
     # Genera la división de la tarea en el número de las estrategías de división
-
     def generate_task_split(self):
         return self.generate_staff_task_matrix(np.asarray([g[1] for _, g in enumerate(self.__mind_strategy)]))
 
@@ -227,7 +235,7 @@ class AcoStaffing:
         return np.asarray(staff_task_matrix)
 
     def generate_initial_solution(self):
-
+        solution_matrix = []
         while True:
             solution_matrix = []
             for i in range(len(self.__task)):
@@ -237,21 +245,27 @@ class AcoStaffing:
                     ded.append(self.__mind_strategy[k][1])
                 solution_matrix.append(ded)
 
-            # Validando que cada tarea este a cargo de mínimo un empleado
-            if np.min([np.sum(v) for _, v in enumerate(solution_matrix)]) > 0:
-                # Validando que las personas asignadas a una tarea cubran las habilidades requeridad (skills)
-                for i in range(len(self.__task)):
-                    a = self.__task_skill[i, 1:]
-                    c = [0 for _ in range(len(a))]
-                    for j, val in enumerate(solution_matrix[i]):
-                        if val > 0:
-                            b = self.__staff_skill[j, 1:]
-                            c = [int(c[k] or b[k]) for k in range(len(b))]
-                    d = [int(c[k] and a[k]) for k in range(len(a))]
-                    # print(a, c, d)
-                    if np.sum(a) != np.sum(d):
-                        continue
+            if self.assess_feasibility(solution_matrix):
                 break
+            # # Validando que cada tarea este a cargo de mínimo un empleado
+            # if np.min([np.sum(v) for _, v in enumerate(solution_matrix)]) > 0:
+            #     # Validando que las personas asignadas a una tarea cubran las habilidades requeridad (skills)
+            #     for i in range(len(self.__task)):
+            #         a = self.__task_skill[i, 1:]
+            #         c = [0 for _ in range(len(a))]
+            #         for j, val in enumerate(solution_matrix[i]):
+            #             if val > 0:
+            #                 b = self.__staff_skill[j, 1:]
+            #                 c = [int(c[k] or b[k]) for k in range(len(b))]
+            #         d = [int(c[k] and a[k]) for k in range(len(a))]
+            #         # print(a, c, d)
+            #         if np.sum(a) != np.sum(d):
+            #             continue
+            #     break
+
+        return self.compute_candidate_solution(np.asarray(solution_matrix))
+
+    def compute_candidate_solution(self, solution_matrix):
 
         # Calculando duración del proyecto
         project_cost_total, task_matrix_dur = self.project_cost_calc(solution_matrix)
@@ -265,13 +279,30 @@ class AcoStaffing:
         # Calculando trabajo de sobretiempo en el staff y tareas
         project_overtime_task_total, project_overeffort_staff_total = self.project_over_calc(task_matrix_dur, tpg_scheduler, solution_matrix)
 
-        return np.asarray(solution_matrix), np.asarray([project_dur_total,
-                                                        project_max_dur_total,
-                                                        project_cost_total,
-                                                        project_overtime_task_total,
-                                                        project_overeffort_staff_total,
-                                                        np.asarray(task_matrix_dur),
-                                                        np.asarray(tpg_scheduler)])
+        return solution_matrix, np.asarray([project_dur_total,
+                                            project_max_dur_total,
+                                            project_cost_total,
+                                            project_overtime_task_total,
+                                            project_overeffort_staff_total,
+                                            np.asarray(task_matrix_dur),
+                                            np.asarray(tpg_scheduler)])
+
+    def assess_feasibility(self, solution_matrix):
+        # Validando que cada tarea este a cargo de mínimo un empleado
+        if np.min([np.sum(v) for _, v in enumerate(solution_matrix)]) > 0:
+            # Validando que las personas asignadas a una tarea cubran las habilidades requeridad (skills)
+            for i in range(len(self.__task)):
+                a = self.__task_skill[i, 1:]
+                c = [0 for _ in range(len(a))]
+                for j, val in enumerate(solution_matrix[i]):
+                    if val > 0:
+                        b = self.__staff_skill[j, 1:]
+                        c = [int(c[k] or b[k]) for k in range(len(b))]
+                d = [int(c[k] and a[k]) for k in range(len(a))]
+                if np.sum(a) != np.sum(d):
+                    return False
+            return True
+        return False
 
     def project_cost_calc(self, solution_matrix):
         # Calculando duración del proyecto
@@ -351,152 +382,4 @@ class AcoStaffing:
 
         return project_overtime_task_total, project_overeffort_staff_total
 
-
-"""
-    @staticmethod
-    def compute_heuristic_values(parameters, covering_list):
-        give = []
-
-        if covering_list:
-            covering = np.asarray(covering_list)
-            for idx, val in enumerate(parameters):
-                values = range(val)
-                # genera entrada para los valores de las variables
-                give.append(np.asarray([0.0 for _ in values]))
-
-                # contar numero de veces en CA_set optimo
-                val_count = collections.Counter(covering[:, idx])
-                val_max = max(val_count.values())
-                val_min = 0
-                # Si no se cuenta algúna varaible el menor valor es 0
-                if len(val_count) == val:
-                    val_min = min(val_count.values())
-                # calculando el valor heurístico nij (inverse de la distancia)
-                for k in values:
-                    give[idx][k] = (val_max - val_count[k] + 1)/(val_max - val_min + 1)
-        else:
-            for i in parameters:
-                give.append(np.asarray([1.0 for _ in range(i)]))
-
-        # log.debug_timer("Heuristica:", give)
-        return np.asarray(give)
-
-    @staticmethod
-    def start_matrix_values(parameters, val):
-        give = []
-        for i in parameters:
-            give.append(np.asarray([val for _ in range(i)]))
-        return np.asarray(give)
-
-    @staticmethod
-    def explore_probability(pheromone_values, heuristic_values, beta):
-        # top = (pheromone_values**0.03) * (heuristic_values ** beta)
-        top = (heuristic_values ** beta)
-        bottom = np.sum(top)
-        quu = np.random.uniform(0, 1, len(pheromone_values))  # random.uniform(0, 1)
-        return quu * (top/bottom)
-
-    @staticmethod
-    def exploit_probability(pheromone_values, heuristic_values, alpha, beta):
-        top = (pheromone_values**alpha) * (heuristic_values ** beta)
-        bottom = np.sum(top)
-        quu = np.random.uniform(0, 1, len(pheromone_values))  # random.uniform(0, 1)
-        if bottom == 0:
-            return quu * (top)
-        return quu * (top/bottom)
-
-    @staticmethod
-    def initial_uncovering_list(parameters, t_way):
-        return np.asarray(list(it.combinations(np.arange(len(parameters)), t_way)))
-
-    @staticmethod
-    def fitness_function(uncovering_list, covering_list, cases_test):
-        give = []
-        max_case = 0
-        if covering_list:
-            cover = np.asarray(covering_list)
-            for test in cases_test:
-
-                if not (cover == test).all(1).any():
-                    count = 0
-                    for uncov in uncovering_list:
-                        # extraer todas la combinaciónes ya realizadas en la matriz de cobertura
-                        check = np.unique(cover[:, uncov], axis=0)
-                        # extraer la combinación del caso de prueba y verificar si cubre una combinación adicional
-                        case = np.asarray(test)[uncov]
-                        # log.debug_timer("No cubiertes", len(uncovering_list), "actual", uncov, "caseo", case, check)
-                        if(check == case).all(1).any():
-                            continue
-                        count += 1
-
-                    # validar también que el mejor caso sea el que pueda elimnar más combinaciones en caso complete varias
-                    if max_case <= count:
-                        max_case = count
-                        give = [count, test]
-
-            if max_case == 0:
-                give = [0, []]
-        else:
-            count = len(uncovering_list)
-            give = [count, cases_test[0]]
-
-        return np.asarray(give)
-
-    @staticmethod
-    def cover_uncovering_list(uncovering_list, covering_list, parameters):
-        give = []
-        if covering_list:
-            cover = np.asarray(covering_list)
-            for uncov in uncovering_list:
-
-                # extraer todas la combinaciónes ya realizadas en la matriz de cobertura
-                check = np.unique(cover[:, uncov], axis=0)
-
-                # total de casos de prueba que deben existir con esta combinación t-way
-                tot = 1
-                for i in uncov:
-                    tot = tot * parameters[i]
-
-                # verificar si con el caso adicional se cubre el la combinación t-way puntual
-                if tot == len(check):
-                    give.append(uncov)
-        else:
-            give = []
-
-        return np.asarray(give)
-
-    @staticmethod
-    def max_candidate(candidates_path):
-        max_cand = 0
-        best_cand = []
-
-        for candidate in candidates_path:
-            if max_cand <= candidate[0]:
-                max_cand = candidate[0]
-                best_cand = candidate
-
-        if max_cand == 0:
-            best_cand = [0, []]
-
-        return best_cand
-
-    @staticmethod
-    def local_pheromones_update(path, pheromone, tau, rho):
-        for idx, edge in enumerate(path):
-            for var in range(len(pheromone[idx])):
-                if var != edge:
-                    pheromone[idx][var] = rho * pheromone[idx][var]
-                else:
-                    pheromone[idx][var] = (1 - rho) * pheromone[idx][var] + rho*tau
-        return pheromone
-
-    @staticmethod
-    def global_pheromones_update(path, pheromone, rho, fi_best, tot_uncover):
-        for idx, edge in enumerate(path):
-            for var in range(len(pheromone[idx])):
-                if var == edge:
-                    pheromone[idx][var] = (1 - rho) * pheromone[idx][var] + rho*(fi_best/tot_uncover)
-        return pheromone
-
-"""
 # FIN:FUNCIONES DE APOYO
