@@ -8,6 +8,7 @@ import itertools as it
 import numpy as np
 from ..help import combination, tool
 from ..help import log
+from tabulate import tabulate
 
 
 class AcoStaffing:
@@ -33,8 +34,8 @@ class AcoStaffing:
         self.__task_precedent = task_precedent
         self.__mind_strategy = mind_strategy
         self.config(ants=20, alpha=3, beta=1, rho=0.5, tau=0.4, quu=0.5, generation=1000)
-        self.weight_config(wcost=10**(-6), wdur=10**(-1), wover=10**(-1))
-        #self.weight_config(wcost=0.1, wdur=0.9, wover=0.9)
+        #self.weight_config(wcost=10**(-6), wdur=10**(-1), wover=10**(-1))
+        self.weight_config(wcost=0.1, wdur=0.9, wover=0.9)
 
     def config(self, ants=None, alpha=None, beta=None, rho=None, tau=None, quu=None, generation=None):
         self.__ants = ants              # número de hormigas
@@ -67,15 +68,15 @@ class AcoStaffing:
         # 03. Generar solución aleatoria
         current_solution, current_goals = self.generate_initial_solution()
 
-        print("Solucion inicial:")
-        self.result_print(current_solution, current_goals)
+        #print("Solucion inicial:")
+        #self.result_print(current_solution, current_goals)
 
         last_ind = 0.0
         last_ind_new = 0.0
         ini_force_close_time = time.process_time()
 
         iteration = 0
-        max_wait = 100
+        max_wait = 200
         count_wait = 0
         #self.__generation = 1
         #self.__ants = 1
@@ -83,6 +84,7 @@ class AcoStaffing:
 
         while (count_wait <= max_wait) and (iteration <= self.__generation):
             iteration += 1
+            max_wait += 1
             for _ in range(self.__ants):
                 ant_values = self.generate_ant_values()
                 alloc_dedicate = np.asarray([0.0 for _ in range(len(self.__staff))])
@@ -106,23 +108,23 @@ class AcoStaffing:
                 if self.assess_feasibility(candidate_solution):
                     candidate_solution, candidate_goals = self.compute_candidate_solution(candidate_solution)
                     if candidate_goals[0] > current_goals[0]:
-                        print("Mejor objetivo", iteration, _, candidate_goals[0])
+                        max_wait = 0
+                        print("Mejor candiddato:", "Fitness:", candidate_goals[0], "Costot:", candidate_goals[1], "Duracion:", candidate_goals[2])
                         current_solution = candidate_solution
                         current_goals = candidate_goals
                         # Update feromona de forma global
                         pheromone_values = self.global_pheromones_update(pheromone_values, [[np.argmax(node) for node in staff] for staff in ant_values], candidate_goals)
 
-        print("Solucion Final:")
+        #print("Solucion Final:")
         # print(pheromone_values)
-        self.result_print(current_solution, current_goals)
+        #self.result_print(current_solution, current_goals)
+        return current_solution, current_goals
 
     # FUNCIONES DE APOYO
 
     def exploit_ant_path(self, pheromone_values, heuristic_values):
         up = (pheromone_values ** self.__alpha) * (heuristic_values ** self.__beta)
         down = [[u if u > 0 else 1.0] for u in np.sum(up, axis=1)]
-        # random_exploit = np.asarray([np.asarray(np.random.uniform(0, 1, len(self.__mind_strategy))) for _ in range(len(self.__staff))])
-        # return random_exploit*(up/down)
         return up/down
 
     def explore_ant_path(self, heuristic_values):
@@ -179,14 +181,6 @@ class AcoStaffing:
         return np.asarray([[strategy for _ in range(len(self.__staff))] for _ in range(len(self.__task))])
 
     def generate_initial_solution(self):
-
-        #  staff_skill = self.__staff_skill[staff_skill, 1:]
-        #     if np.sum([int(staff_skill[k] and task_skill[k]) for k in range(len(task_skill))]) <= 0:
-        #         # penalizamos y asignar el valor inical de la estrategía, que es 0
-        #         heuristic[i][0] = np.max(heuristic[i])
-        #         for j in range(1, len(heuristic[i])):
-        #             heuristic[i][j] = 0
-
         solution_matrix = []
         while True:
             solution_matrix = []
@@ -391,4 +385,39 @@ class AcoStaffing:
         print(20*"*", 60*"*", 20*"*")
         print(20*"*", 60*"*", 20*"*")
         print(20*"*", 60*"*", 20*"*")
-        # FIN:FUNCIONES DE APOYO
+
+    def result_print(self, solution, goal, task_desc, staff_desc):
+        print(20*"*", 60*"*", 20*"*")
+        print(20*"*", 60*"*", 20*"*")
+        print(20*"*", 60*"*", 20*"*")
+        print(20*"*", "MATRIZ DE ASIGNACION", 20*"*")
+        sol = [list(map(str, x)) for x in np.array(solution.transpose())]
+        sol = [[15*" "+i for i in e] for e in sol]
+        sol = np.insert(sol, 0,  task_desc[:, 1:].transpose()[0], axis=0)
+        #data = {"Personal": np.insert(staff_desc[:, 1:], 0, " ", axis=0).tolist(), "data": sol}
+        sol = np.insert(sol, 0,  np.insert(staff_desc[:, 1:], 0, " ", axis=0).transpose()[0], axis=1)
+
+        table = tabulate(sol, headers="firstrow", tablefmt="grid")
+        tabulate.PRESERVE_WHITESPACE = True
+        print(table)
+        print(20*"*", "VALOR FITNESS", 20*"*")
+        print(goal[0])
+        print(20*"*", "VALOR COST", 20*"*")
+        print(goal[1])
+        print(20*"*", "VALOR DURACION DEL PROYECTO", 20*"*")
+        print(goal[2])
+        print(20*"*", "VALOR DURACION MAXIMA", 20*"*")
+        print(goal[3])
+        print(20*"*", "SOBRETIEMPO DE TAREAS", 20*"*")
+        print(goal[4])
+        print(20*"*", "SOBRETIEMPO DE PERSONAL", 20*"*")
+        print(goal[5])
+        print(20*"*", "DURACION DE CADA TAREA", 20*"*")
+        print(goal[6])
+        print(20*"*", "RUTA CRITICA DE TAREAS (CRONOGRAMA)", 20*"*")
+        print(goal[7])
+        print(20*"*", 60*"*", 20*"*")
+        print(20*"*", 60*"*", 20*"*")
+        print(20*"*", 60*"*", 20*"*")
+
+    # FIN:FUNCIONES DE APOYO

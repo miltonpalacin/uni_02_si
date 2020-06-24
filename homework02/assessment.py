@@ -15,6 +15,8 @@ staff_skill = np.array([tuple(map(float, line.split(' '))) for line in open(path
 task_skill = np.array([tuple(map(float, line.split(' '))) for line in open(path + "05.taskskill.txt").read().splitlines()])
 task_precedent = np.array([tuple(map(float, line.split(' '))) for line in open(path + "06.taskprecedent.txt").read().splitlines()])
 mind_strategy = np.array([tuple(map(float, line.split(' '))) for line in open(path + "07.mindstrategy.txt").read().splitlines()])
+staff_desc = np.array([line.split(',') for line in open(path + "08.staffdesc.txt").read().splitlines()])
+task_desc = np.array([line.split(',') for line in open(path + "09.taskdesc.txt").read().splitlines()])
 # print()
 # print(20*"*", "PARAMETROS")
 # print(20*"*", 60*"*", 20*"*")
@@ -58,24 +60,17 @@ META_ACO = aco.AcoStaffing(
 # Realizar una prueba ejecutando el método RUN
 log.COUNTER_TIME = 10
 log.debug_timer("Empezando seguimiento...")
-TEST = META_ACO.run()
+META_ACO.config(ants=20, alpha=3, beta=1, rho=0.5, tau=0.4, quu=0.5, generation=2)
+META_ACO.weight_config(wcost=0.1, wdur=0.9, wover=0.9)
+solution, goal = META_ACO.run()
 
 # Resultados
-'''
 print(90*"=")
-print(10 * " ", 20*"*", "CASOS DE PRUEBA OPTIMIZADA", 20*"*")
-print(90*"=")
-print("\n")
-print(TEST)
-print("\n")
-print(90*"=")
-print(10 * " ", 20*"*", "RESULTADOS", 20*"*")
+print(10 * " ", 20*"*", "MEJOR ASIGNACION DE RECURSOS", 20*"*")
 print(90*"=")
 print("\n")
-print("Total de pruebas exhaustiva:", 4*"\t", '{:10,.2f}'.format(np.prod([pow(a[0], a[1]) for a in VP])))
-print("Todal de casos de pruebas optimizada a ", T, "- way:", 0*"\t", len(TEST))
-print("Porcentaje optimizado a ", T, "- way:", 4*"\t", (1 - len(TEST)/np.prod([pow(a[0], a[1]) for a in VP])))
-'''
+META_ACO.result_print(solution, goal, task_desc, staff_desc)
+print("\n")
 
 # Finalizar el control del tiempo
 END_TIME = time.process_time()
