@@ -33,8 +33,8 @@ class AcoStaffing:
         self.__task_precedent = task_precedent
         self.__mind_strategy = mind_strategy
         self.config(ants=20, alpha=3, beta=1, rho=0.5, tau=0.4, quu=0.5, generation=1000)
-        #self.weight_config(wcost=10**(-6), wdur=10**(-1), wover=10**(-1))
-        self.weight_config(wcost=0.1, wdur=0.9, wover=0.9)
+        self.weight_config(wcost=10**(-6), wdur=10**(-1), wover=10**(-1))
+        #self.weight_config(wcost=0.1, wdur=0.9, wover=0.9)
 
     def config(self, ants=None, alpha=None, beta=None, rho=None, tau=None, quu=None, generation=None):
         self.__ants = ants              # número de hormigas
@@ -77,8 +77,8 @@ class AcoStaffing:
         iteration = 0
         max_wait = 100
         count_wait = 0
-        # self.__generation = 1
-        # self.__ants = 1
+        #self.__generation = 1
+        #self.__ants = 1
         # print(pheromone_values)
 
         while (count_wait <= max_wait) and (iteration <= self.__generation):
@@ -97,7 +97,7 @@ class AcoStaffing:
                         ant_values[i] = self.exploit_ant_path(pheromone_values[i], heuristic_values)
 
                     # Actualización local feromona
-                    # print("PPPUNO", pheromone_values[i],[np.argmax(node) for node in ant_values[i]])
+                    #print("PPPUNO", heuristic_values,[np.argmax(node) for node in ant_values[i]])
                     alloc_dedicate = alloc_dedicate + [self.__mind_strategy[np.argmax(node)][1] for node in ant_values[i]]
                     # print("alloc_dedicate", iteration, _, i, alloc_dedicate, heuristic_values)
                     pheromone_values[i] = self.local_pheromones_update(pheromone_values[i], [np.argmax(node) for node in ant_values[i]], i)
@@ -141,14 +141,7 @@ class AcoStaffing:
     def generate_pheromone_values(self):
         return self.generate_staff_task_matrix(np.asarray([0.0 for _ in range(len(self.__mind_strategy))]))
 
-    # def generate_heuristic_values(self):
-    #     total=np.sum(self.__mind_strategy[:, 1])
-    #     return self.generate_staff_task_matrix(np.asarray([1/total for _ in range(len(self.__mind_strategy))]))
-    #     strategy=np.asarray([1/total for _ in range(len(self.__mind_strategy))])
-
     def heuristic_values(self, alloc_dedicate, task):
-        # return np.asarray([[0.4 for g in self.__mind_strategy] for i in range(len(self.__staff))])
-        task_skill = self.__task_skill[task]
         heuristic = np.asarray([[g[1] for g in self.__mind_strategy] for i in range(len(self.__staff))])
 
         for i, e in enumerate(heuristic):
@@ -160,6 +153,7 @@ class AcoStaffing:
 
         total_tmp = np.sum(heuristic, axis=1)
 
+        task_skill = self.__task_skill[task, 1:]
         for i, e in enumerate(heuristic):
             total = total_tmp[i]
             alloc = alloc_dedicate[i]
@@ -168,6 +162,14 @@ class AcoStaffing:
             else:
                 heuristic[i] = e/total
 
+            # validamos que el skill de staff contenga mínimo uno del skill task
+            staff_skill = self.__staff_skill[i, 1:]
+            if np.sum([int(staff_skill[k] and task_skill[k]) for k in range(len(task_skill))]) <= 0:
+                # penalizamos y asignar el valor inical de la estrategía, que es 0
+                heuristic[i][0] = np.max(heuristic[i])
+                for j in range(1, len(heuristic[i])):
+                    heuristic[i][j] = 0
+
         # total = np.sum(self.__mind_strategy[:, 1])
         # return self.generate_staff_task_matrix(np.asarray([1/total for _ in range(len(self.__mind_strategy))]))
         # strategy = np.asarray([1/total for _ in range(len(self.__mind_strategy))])
@@ -175,23 +177,28 @@ class AcoStaffing:
 
     def generate_staff_task_matrix(self, strategy):
         return np.asarray([[strategy for _ in range(len(self.__staff))] for _ in range(len(self.__task))])
-        # staff_task_matrix = []
-        # for i in range(len(self.__task)):
-        #     task_strategy = []
-        #     for j in range(len(self.__staff)):
-        #         task_strategy.append(strategy)
-        #     staff_task_matrix.append(np.asarray(task_strategy))
-
-        # return np.asarray(staff_task_matrix)
 
     def generate_initial_solution(self):
+
+        #  staff_skill = self.__staff_skill[staff_skill, 1:]
+        #     if np.sum([int(staff_skill[k] and task_skill[k]) for k in range(len(task_skill))]) <= 0:
+        #         # penalizamos y asignar el valor inical de la estrategía, que es 0
+        #         heuristic[i][0] = np.max(heuristic[i])
+        #         for j in range(1, len(heuristic[i])):
+        #             heuristic[i][j] = 0
+
         solution_matrix = []
         while True:
             solution_matrix = []
             for i in range(len(self.__task)):
+                task_skill = self.__task_skill[i, 1:]
                 ded = []
                 for j in range(len(self.__staff)):
-                    k = randint(0, len(self.__mind_strategy) - 1)
+                    # validamos que el skill de staff contenga mínimo uno del skill task
+                    staff_skill = self.__staff_skill[j, 1:]
+                    k = 0
+                    if np.sum([int(staff_skill[k] and task_skill[k]) for k in range(len(task_skill))]) > 0:
+                        k = randint(0, len(self.__mind_strategy) - 1)
                     ded.append(self.__mind_strategy[k][1])
                 solution_matrix.append(ded)
 
@@ -235,22 +242,6 @@ class AcoStaffing:
     def assess_feasibility(self, solution_matrix):
         # Validando que cada tarea este a cargo de mínimo un empleado
         if np.min([np.sum(v) for _, v in enumerate(solution_matrix)]) > 0:
-            # for i in range(len(self.__task)):
-            #     a = self.__task_skill[i, 1:]
-            #     c = [0 for _ in range(len(a))]
-            #     for j, val in enumerate(solution_matrix[i]):
-            #         if val > 0:
-            #             b = self.__staff_skill[j, 1:]
-            #             c = [int(c[k] or b[k]) for k in range(len(b))]
-            #             d = [int(a[k] and b[k]) for k in range(len(b))]
-            #             # Validando que las personas asignadas tegna mínimo una habilidad requeridad pora tarea
-            #             if np.sum(d) > 0:
-            #                 return False
-            #     e = [int(c[k] and a[k]) for k in range(len(a))]
-            #     # Validando que las personas asignadas a una tarea cubran las habilidades requeridad (skills)
-            #     if np.sum(a) != np.sum(e):
-            #         return False
-
             # Validando que las personas asignadas a una tarea cubran las habilidades requeridad (skills)
             for i in range(len(self.__task)):
                 a = self.__task_skill[i, 1:]
