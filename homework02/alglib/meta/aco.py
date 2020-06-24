@@ -33,7 +33,8 @@ class AcoStaffing:
         self.__task_precedent = task_precedent
         self.__mind_strategy = mind_strategy
         self.config(ants=20, alpha=0.5, beta=3, rho=0.5, tau=0.4, quu=0.5, generation=200)
-        self.weight_config(wcost=10**(-6), wdur=10**(-1), wover=10**(-1))
+        # self.weight_config(wcost=10**(-6), wdur=10**(-1), wover=10**(-1))
+        self.weight_config(wcost=0.1, wdur=0.9, wover=0.9)
 
     def config(self, ants=None, alpha=None, beta=None, rho=None, tau=None, quu=None, generation=None):
         self.__ants = ants              # número de hormigas
@@ -78,9 +79,9 @@ class AcoStaffing:
         iteration = 0
         max_wait = 100
         count_wait = 0
-        # self.__generation = 100
-        # self.__ants = 10
-        
+        #self.__generation = 1
+        #self.__ants = 1
+
         while (count_wait <= max_wait) and (iteration <= self.__generation):
             iteration += 1
             for _ in range(self.__ants):
@@ -95,17 +96,20 @@ class AcoStaffing:
                         # explotamos un nuevo ruta
                         ant_values[i] = self.exploit_ant_path(pheromone_values[i], heuristic_values[i])
 
+                    # Actualización local feromona
+                    #print("PPPUNO", pheromone_values[i],[np.argmax(node) for node in ant_values[i]])
+                    pheromone_values[i] = self.local_pheromones_update(pheromone_values[i], [np.argmax(node) for node in ant_values[i]], i)
+
+                #print("PPPDOS", pheromone_values)
                 candidate_solution = np.asarray([[self.__mind_strategy[np.argmax(node)][1] for node in staff] for staff in ant_values])
                 if self.assess_feasibility(candidate_solution):
                     candidate_solution, candidate_goals = self.compute_candidate_solution(candidate_solution)
                     if candidate_goals[0] > current_goals[0]:
-                        # print(30*"*", "ANTES")
-                        # print(current_solution, current_goals)
                         current_solution = candidate_solution
                         current_goals = candidate_goals
-                        # print(30*"*", "Ahora")
-                        # print(current_solution, current_goals)
-                        # Update feromona
+                    # Update feromona de forma local
+                    # pheromone_values = self.local_pheromones_update(current_solution, pheromone_values)
+
         print("Solucion Final:")
         self.result_print(current_solution, current_goals)
         # print(current_solution)
@@ -116,8 +120,9 @@ class AcoStaffing:
     def exploit_ant_path(self, pheromone_values, heuristic_values):
         up = (pheromone_values ** self.__alpha) * (heuristic_values ** self.__beta)
         down = [[u if u > 0 else 1.0] for u in np.sum(up, axis=1)]
-        random_exploit = np.asarray([np.asarray(np.random.uniform(0, 1, len(self.__mind_strategy))) for _ in range(len(self.__staff))])
-        return random_exploit*(up/down)
+        # random_exploit = np.asarray([np.asarray(np.random.uniform(0, 1, len(self.__mind_strategy))) for _ in range(len(self.__staff))])
+        # return random_exploit*(up/down)
+        return up/down
 
     def explore_ant_path(self, heuristic_values):
         up = (heuristic_values ** self.__beta)
@@ -195,10 +200,8 @@ class AcoStaffing:
                                             np.asarray(tpg_scheduler)])
 
     def fitness_function(self, cost, duration, overtime, overeffort):
-        return (self.__wcost*cost +
-                self.__wdur*duration +
-                self.__wover*overtime +
-                self.__wover*overeffort)**(-1)
+        fitness_pre = self.__wcost*cost + self.__wdur*duration + self.__wover*overtime + self.__wover*overeffort
+        return 0 if fitness_pre <= 0 else (fitness_pre**-1)
 
     def assess_feasibility(self, solution_matrix):
         # Validando que cada tarea este a cargo de mínimo un empleado
@@ -245,7 +248,7 @@ class AcoStaffing:
                     start = max(start, tpg_scheduler[j][1])
             end = start + task_matrix_dur[i]
             tpg_scheduler.append([start, end])
-            #print(i, precedents, start, end, tpg_scheduler)
+            # print(i, precedents, start, end, tpg_scheduler)
             project_dur_total = end
         return project_dur_total, tpg_scheduler
 
@@ -292,9 +295,28 @@ class AcoStaffing:
                             tpg_scheduler_tmp[k][0] = tpg_scheduler_tmp[k][0] + dif
                             over_effort += solution_matrix[k][i]
             over_effort = over_effort - self.__task[i][2]
-            # print(i, over_effort)
             project_overeffort_staff_total += 0 if over_effort <= 0 else over_effort
+
         return project_overtime_task_total, project_overeffort_staff_total
+
+    def local_pheromones_update(self, pheromone, path, task):
+        delta = self.delta_pheromone(path, task)
+        for idx, edge in enumerate(path):
+            for var in range(len(pheromone[idx])):
+                if var == edge:
+                    pheromone[idx][var] = (1 - self.__rho) * pheromone[idx][var] + self.__rho*delta
+        return pheromone
+
+    def delta_pheromone(self, path, task):
+        solution_matrix = [self.__mind_strategy[edge][1] for edge in path]
+        staff_dur = np.sum(solution_matrix)
+        task_dur = (0 if staff_dur <= 0 else (self.__task[task][1] / staff_dur))
+        task_cost = np.sum([e[1]*solution_matrix[j]*task_dur for j, e in enumerate(self.__staff)])
+        over_task = (task_dur-self.__task[task][2]) if task_dur > self.__task[task][2] else 0
+
+        #print("delta_pheromone", task_dur, task_cost, over_task)
+        fitness_pre = self.__wcost*task_cost + self.__wdur*task_dur + self.__wover*over_task
+        return 0 if fitness_pre <= 0 else (fitness_pre**-1)
 
     def result_print(self, solution, goal):
         print(20*"*", 60*"*", 20*"*")
