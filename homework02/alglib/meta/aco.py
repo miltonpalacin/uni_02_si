@@ -54,7 +54,7 @@ class AcoStaffing:
     def run(self):
         # 00. Generación de la matriz con con el división de cada tareas, dada por la densidad de la dedicación
         #     den = 1 + 1/mind ó len(matrix_mind).numrow
-        task_paths = self.generate_task_split()
+        #task_paths = self.generate_task_split()# No utilizado, solo es referencia al pseudocódigo
         # print(task_paths)
 
         # 02. Inicializar el valor feromonas
@@ -109,7 +109,7 @@ class AcoStaffing:
                     candidate_solution, candidate_goals = self.compute_candidate_solution(candidate_solution)
                     if candidate_goals[0] > current_goals[0]:
                         max_wait = 0
-                        #log.debug_timer("Mejor candidato:", "Fitness:", candidate_goals[0], "Cost:", candidate_goals[1], "Duration:", candidate_goals[2])
+                        log.debug_timer("Mejor candidato:", "Fitness:", candidate_goals[0], "Cost:", candidate_goals[1], "Duration:", candidate_goals[2])
                         # print("Mejor candiddato:", "Fitness:", candidate_goals[0], "Costot:", candidate_goals[1], "Duracion:", candidate_goals[2])
                         current_solution = candidate_solution
                         current_goals = candidate_goals
@@ -325,7 +325,7 @@ class AcoStaffing:
                             dif = min(end - tpg_scheduler_tmp[k][0], task_matrix_dur[k])
                             tpg_scheduler_tmp[k][0] = tpg_scheduler_tmp[k][0] + dif
                             over_effort += solution_matrix[k][i]
-            over_effort = over_effort - self.__task[i][2]
+            over_effort = over_effort - e[2]
             project_overeffort_staff_total += 0 if over_effort <= 0 else over_effort
 
         return project_overtime_task_total, project_overeffort_staff_total

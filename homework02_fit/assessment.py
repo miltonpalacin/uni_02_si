@@ -30,10 +30,13 @@ META_ACO = aco.AcoStaffing(
 # Realizar una prueba ejecutando el método RUN
 log.COUNTER_TIME = 1
 log.debug_timer("Empezando seguimiento...")
-#META_ACO.config(ants=20, alpha=3, beta=1, rho=0.5, tau=0.4, quu=0.5, generation=200)
-META_ACO.config(ants=20, alpha=3, beta=1, rho=0.5, tau=0.4, quu=0.5, generation=200)
-# META_ACO.weight_config(wcost=0.9, wdur=0.1, wover=0.9)
-META_ACO.weight_config(wcost=10**(-7), wdur=10**(-1), wover=10**(-1))
+
+
+# META_ACO.config(ants=20, alpha=3, beta=1, rho=0.5, tau=0.4, quu=0.5, generation=1000,is_normalize=False, is_stress=False)
+# META_ACO.weight_config(wcost=0.5, wdur=0.5)
+META_ACO.config(ants=20, alpha=3, beta=1, rho=0.5, tau=0.4, quu=0.5, generation=200,is_normalize=False, is_stress=False)
+META_ACO.weight_config(wcost=0.1, wdur=0.9, cost_fit = 2180.859848, duration_fit = 151.3333333)
+
 solution, goal = META_ACO.run()
 
 # Resultados

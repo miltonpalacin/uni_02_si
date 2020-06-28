@@ -1,0 +1,7 @@
+1,Diseño de Software
+2,Diseño BD
+3,Programación Sistema
+4,Diseño de Interfaz
+5,Testeo Programa
+6,Documentacion DB
+7,Manual de usuario

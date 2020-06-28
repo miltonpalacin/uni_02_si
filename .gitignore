@@ -131,3 +131,7 @@ test*.py
 homework/prueba_01.py
 .vscode/
 libsys/
+homework02_fit/tareas.csv
+homework02_fit/staffing_pso.py
+homework02_fit/skills.csv
+homework02_fit/caso_prueba_staffing.xlsx
