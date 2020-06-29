@@ -18,7 +18,7 @@ META_ACO = aco.AcoStaffing(
 log.COUNTER_TIME = 1
 log.debug_timer("Empezando seguimiento...")
 
-META_ACO.config(ants=20, alpha=3, beta=1, rho=0.5, tau=0.4, quu=0.5, generation=1000, is_normalize=False, is_stress=True)
+META_ACO.config(ants=20, alpha=3, beta=1, rho=0.5, tau=0.4, quu=0.5, generation=250, is_normalize=False, is_stress=True)
 META_ACO.weight_config(wcost=0.5, wdur=0.5)
 
 history = []

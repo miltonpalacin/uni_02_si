@@ -40,15 +40,20 @@ history_iter = []
 min_total = []
 fit_min = sys.maxsize
 #####
-cost_fit = 2180.859848
-duration_fit = 151.3333333
+cost_fit = 2227.49798
+duration_fit = 217.6131395
 #####
 
+solution_min = []
+goal_min = []
 start_time_head = time.process_time()
+
 
 for e in pesos:
     fit_iter = sys.maxsize
     min_iter = []
+    solution_iter = []
+    goal_iter = []
     print(40*"-")
     print("Proceso de ACO con pesos  W_Peso{0}, W_Duracion {1} para normalizar el f(cost) y el f(duration):".format(e[0], e[1]))
     print(40*"-")
@@ -66,7 +71,9 @@ for e in pesos:
         history.append([dif_time, goal[0], goal[1], goal[2], e[0], e[1]])
 
         if goal[0] <= fit_iter:
+            solution_iter = solution
             fit_iter = goal[0]
+            goal_iter = goal
             min_iter = [dif_time, goal[0], goal[1], goal[2], e[0], e[1]]
             print("Fitness en ITERACION:", _, "Tiempo:", dif_time, "Fitness:", goal[0], "Cost:", goal[1], "Duration:", goal[2], "WCost:", e[0], "WDuration", e[1])
 
@@ -75,6 +82,8 @@ for e in pesos:
     if fit_iter <= fit_min:
         fit_min = fit_iter
         min_total = min_iter
+        solution_min = solution_iter
+        goal_min = goal_iter 
         print("Fitness en PESO:", "Tiempo:", min_iter[0], "Fitness:", min_iter[1], "Cost:", min_iter[2], "Duration:", min_iter[3], "WCost:", min_iter[4], "WDuration", min_iter[5])
 
 
@@ -99,3 +108,11 @@ print(40*"-")
 print(40*"-")
 print("history_peso")
 np.savetxt("history_peso.csv", history, delimiter=";")
+
+# Resultados
+print(90*"=")
+print(10 * " ", 20*"*", "MEJOR ASIGNACION DE RECURSOS", 20*"*")
+print(90*"=")
+print("\n")
+META_ACO.result_print(solution_min, goal_min, input.task_desc, input.staff_desc)
+print("\n")

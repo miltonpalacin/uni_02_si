@@ -148,7 +148,7 @@ class AcoStaffing:
     # delta global de la feromona: compensa la calidad de le feromona de la solución de proyecto
     def delta_pheromone_global(self, project_cost, project_dur, project_over_task, project_over_staff, project_cost_ajust):
         if not self.__is_normalize:
-            fitness_pre = self.__wcost*(project_cost + project_cost_ajust) + self.__wdur*(project_dur + project_over_task + project_over_staff)
+            fitness_pre = self.__wcost*project_cost + self.__wdur*(project_dur + project_over_task + project_over_staff)
         else:
             fitness_pre = self.__wcost*project_cost/self.__cost_fit + self.__wdur*(project_dur + project_over_task + project_over_staff)/self.__duration_fit
         return 0 if fitness_pre <= 0 else (fitness_pre**-1)
@@ -180,7 +180,7 @@ class AcoStaffing:
             # validar que el skill de staff contenga minimo uno del skill task
             staff_skill = self.__staff_skill[i, 1:]
             if np.sum([int(staff_skill[k] and task_skill[k]) for k in range(len(task_skill))]) <= 0:
-                # penaliza y asignar el valor inical de la estrategía, que es 0%
+                # penaliza y asignar el valor inical de la estrategia, que es 0%
                 heuristic[i][0] = np.max(heuristic[i])
                 for j in range(1, len(heuristic[i])):
                     heuristic[i][j] = 0
@@ -247,7 +247,7 @@ class AcoStaffing:
         fitness_value = self.fitness_function(project_cost_total, project_dur_total)
 
         # ajuste al costo del proyecto por el exceso de horas del personal (pago doble, la primera se dio en calculo inicial)
-        # si ek empleado esta en n tareas al mismo tiempo y sobre pasa su capacida se le paga n veces (este parte se tiene que MEJORAR)
+        # si el empleado esta en n tareas al mismo tiempo y sobre pasa su capacida se le paga n veces (este parte se tiene que MEJORAR)
         project_cost_total += project_cost_ajust
 
         return solution_matrix, np.asarray([fitness_value,
@@ -304,19 +304,6 @@ class AcoStaffing:
         return self.compute_candidate_solution(np.asarray(solution_matrix))
 
     def project_cost_calc(self, solution_matrix):
-        # calcular duración del proyecto
-        project_cost_total = 0
-        task_matrix_dur = []
-        for i in range(len(self.__task)):
-            #staff_dur = np.sum([e[2]*solution_matrix[i][j] for j, e in enumerate(self.__staff)])
-            staff_dur = np.sum([solution_matrix[i][j] for j in range(len(self.__staff))])
-            task_dur = (0 if staff_dur <= 0 else (self.__task[i][1] / staff_dur))
-            task_matrix_dur.append(task_dur)
-            project_cost_total += np.sum([e[1]*solution_matrix[i][j]*task_dur for j, e in enumerate(self.__staff)])
-
-        return project_cost_total, task_matrix_dur
-
-    def project_cost_calc_ajust(self, solution_matrix):
         # calcular duración del proyecto
         project_cost_total = 0
         task_matrix_dur = []
@@ -397,10 +384,6 @@ class AcoStaffing:
             if cost_effort > 0:
                 project_overeffort_staff_total += (cost_effort/e[1])
                 project_cost_ajust += cost_effort
-            # over_effort = over_effort - e[2]
-            # if over_effort > 0:
-            #     project_overeffort_staff_total += over_effort
-            #     prohect_cost_ajust += over_effort
 
         return project_overtime_task_total, project_overeffort_staff_total, project_cost_ajust
 
