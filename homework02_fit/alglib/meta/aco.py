@@ -192,7 +192,7 @@ class AcoStaffing:
     # ################ #
     # FUNCION DE APTITUP - FITNESS
     def fitness_function(self, cost, duration):
-        # Maximizar
+        # Minimizar
         if not self.__is_normalize:
             fitness_pre = self.__wcost*cost + self.__wdur*duration
         else:
